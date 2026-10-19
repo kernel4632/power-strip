@@ -41,6 +41,7 @@ interface PowerState {
   cameraView: CameraView
   cameraRevision: number
   inspectionPart: InspectionPart
+  inspectedDevice: DeviceId | null
   select: (id: Selection) => void
   selectStation: (id: StationId) => void
   closePanel: () => void
@@ -76,6 +77,7 @@ export const usePowerStore = create<PowerState>()((set) => ({
   cameraView: 'overview',
   cameraRevision: 0,
   inspectionPart: 'station',
+  inspectedDevice: null,
   select: (selected) =>
     set((state) => ({
       selected,
@@ -94,6 +96,7 @@ export const usePowerStore = create<PowerState>()((set) => ({
       cutaway: true,
       autoRotate: false,
       inspectionPart: 'station',
+      inspectedDevice: null,
       cameraRevision: state.cameraRevision + 1,
     })),
   closePanel: () => set({ selected: null }),
@@ -149,19 +152,25 @@ export const usePowerStore = create<PowerState>()((set) => ({
       selected: null,
       activeStation: null,
       inspectionPart: 'station',
+      inspectedDevice: null,
       autoRotate: false,
       cameraRevision: state.cameraRevision + 1,
     })),
   focus: () =>
-    set((state) => ({
-      cameraRevision: state.cameraRevision + 1,
-      inspectionPart: 'device',
-      autoRotate: false,
-      cutaway: true,
-    })),
+    set((state) => {
+      if (!state.selected?.includes('-')) return state
+      return {
+        inspectedDevice: state.selected as DeviceId,
+        cameraRevision: state.cameraRevision + 1,
+        inspectionPart: 'device',
+        autoRotate: false,
+        cutaway: true,
+      }
+    }),
   inspect: (inspectionPart) =>
     set((state) => ({
       inspectionPart,
+      inspectedDevice: null,
       cutaway: inspectionPart !== 'bed',
       cameraRevision: state.cameraRevision + 1,
       autoRotate: false,

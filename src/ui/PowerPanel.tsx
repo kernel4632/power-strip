@@ -107,6 +107,12 @@ export function PowerPanel() {
           {station?.name} / 插孔 {spec.socket + 1} / 仅此床位回路
         </p>
       )}
+      {spec && (
+        <button className="focus-button" onClick={state.focus}>
+          <Icon name="focus" size={17} />
+          近距离检查模型<span>DETAIL VIEW</span>
+        </button>
+      )}
       <section className="detail-power">
         <span className="field-label">
           {spec ? '当前设备功率' : station ? '本床位总功率' : '全寝总功率'}
@@ -272,16 +278,6 @@ export function PowerPanel() {
       {spec && (
         <>
           <p className="device-description">{spec.description}</p>
-          <button
-            className="focus-button"
-            onClick={() => {
-              state.focus()
-              panel.current?.scrollTo({ top: 0 })
-            }}
-          >
-            <Icon name="focus" size={17} />
-            近距离检查模型<span>DETAIL VIEW</span>
-          </button>
           <button
             className="back-overview"
             onClick={() => state.select(spec.stationId)}

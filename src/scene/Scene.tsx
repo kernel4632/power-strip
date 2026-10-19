@@ -23,7 +23,7 @@ import {
   toWorld,
 } from '../data/catalog'
 import { usePowerStore } from '../store/usePowerStore'
-import type { DeviceId, Point3 } from '../types'
+import type { Point3 } from '../types'
 import { Appliance } from './Appliance'
 import { DormRoom } from './DormRoom'
 import { PowerStrip } from './PowerStrip'
@@ -46,8 +46,8 @@ function CameraRig() {
     let preset = state.activeStation
       ? stationCamera(state.activeStation)
       : CAMERA_VIEWS[state.cameraView]
-    if (state.inspectionPart === 'device' && state.selected?.includes('-')) {
-      const device = DEVICE_MAP[state.selected as DeviceId],
+    if (state.inspectionPart === 'device' && state.inspectedDevice) {
+      const device = DEVICE_MAP[state.inspectedDevice],
         station = STATION_MAP[device.stationId]
       const target: Point3 = [
         device.localPosition[0],
