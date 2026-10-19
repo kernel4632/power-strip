@@ -1,3 +1,349 @@
+.station-selector {
+  position: absolute;
+  z-index: 38;
+  bottom: 126px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 7px;
+  padding: 6px;
+  border: 1px solid #ffffff66;
+  border-radius: 12px;
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 6px 28px #34452b0c;
+}
+.station-selector > button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  background: transparent;
+  border-radius: 8px;
+  padding: 11px 12px;
+  min-width: 150px;
+  border: 1px solid transparent;
+}
+.station-selector > button.selected {
+  background: #8b9d7f14;
+  border-color: var(--line);
+}
+.station-selector > button:hover {
+  background: #8b9d7f1a;
+}
+.station-selector > button > i {
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f5f2e8;
+  border-radius: 8px;
+  width: 32px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+}
+.station-selector > button > span {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.station-selector small {
+  font-size: 8px;
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.station-selector svg {
+  margin-left: 4px;
+  color: var(--muted);
+}
+.station-hotspot {
+  padding: 7px 10px;
+  gap: 8px !important;
+}
+.station-hotspot__number {
+  padding: 5px;
+  border-radius: 4px;
+  color: white;
+  font-size: 11px;
+}
+.station-hotspot strong {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+}
+.station-hotspot small {
+  display: block;
+  font-size: 7px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.station-context {
+  position: absolute;
+  top: 120px;
+  left: 42px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: var(--surface);
+  padding: 12px 17px;
+  border-radius: 9px;
+  z-index: 32;
+  font-size: 11px;
+  box-shadow: 0 4px 18px #2333220a;
+}
+.station-context button {
+  display: flex;
+  gap: 6px;
+  background: none;
+  align-items: center;
+  font-size: 10px;
+}
+.station-context > span {
+  color: var(--muted);
+}
+.station-context small {
+  font-size: 9px;
+  color: var(--muted);
+}
+.station-context em {
+  font-style: normal;
+  font-size: 8px;
+  color: var(--muted);
+  margin-left: 10px;
+  border-left: 1px solid var(--line);
+  padding-left: 10px;
+}
+.experience--station .intro-copy {
+  display: none;
+}
+.socket-assignment {
+  font-size: 9px;
+  color: var(--muted);
+  padding: 10px;
+  background: #8397760b;
+  border-radius: 6px;
+}
+.socket-number {
+  height: 19px;
+  width: 19px;
+  display: grid;
+  place-items: center;
+  background: #8e9c7b1a;
+  border-radius: 4px;
+  font-size: 9px;
+  flex-shrink: 0;
+}
+.station-breakdown {
+  margin-top: 12px;
+}
+.station-breakdown button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  text-align: left;
+}
+.station-breakdown i {
+  width: 30px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-style: normal;
+  border-radius: 6px;
+  color: white;
+}
+.station-breakdown span {
+  font-size: 11px;
+}
+.station-breakdown small {
+  display: block;
+  font-size: 8px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.station-breakdown b {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 500;
+}
+.room-scale {
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.experience .view-selector {
+  bottom: 214px;
+}
+.experience--station .energy-summary {
+  opacity: 0.45;
+}
+.experience .detail-panel {
+  width: 325px;
+}
+.experience--inspecting .scene-tools {
+  right: 365px;
+}
+@media (max-width: 1250px) {
+  .station-selector > button {
+    min-width: 123px;
+    padding: 10px 8px;
+  }
+  .station-selector > button > span {
+    font-size: 9px;
+  }
+  .station-selector svg {
+    display: none;
+  }
+  .station-context {
+    left: 25px;
+  }
+  .room-scale {
+    display: none;
+  }
+  .experience .energy-summary {
+    width: 187px;
+  }
+  .experience .intro-copy h1 {
+    font-size: 27px;
+  }
+}
+@media (max-width: 800px) {
+  .station-selector {
+    bottom: 132px;
+    left: 50%;
+    width: calc(100% - 38px);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    padding: 4px;
+    max-width: 400px;
+  }
+  .station-selector > button {
+    padding: 8px;
+    min-width: 0;
+  }
+  .station-selector > button > i {
+    width: 25px;
+    height: 29px;
+    font-size: 10px;
+  }
+  .station-selector > button > span {
+    font-size: 9px;
+  }
+  .station-selector small {
+    font-size: 7px;
+    margin-top: 3px;
+  }
+  .experience .view-selector {
+    bottom: 82px;
+  }
+  .experience .energy-summary {
+    left: 19px;
+    bottom: 260px;
+    width: 143px;
+    padding: 10px;
+  }
+  .experience .energy-summary .power-chart,
+  .experience .energy-summary .summary-footer {
+    display: none;
+  }
+  .experience .summary-heading {
+    font-size: 7px;
+  }
+  .experience .summary-reading {
+    margin-bottom: 2px;
+  }
+  .experience .summary-reading > span {
+    font-size: 26px;
+  }
+  .experience--station .energy-summary {
+    display: none;
+  }
+  .station-context {
+    top: 92px;
+    left: 18px;
+    right: 18px;
+    font-size: 10px;
+    padding: 10px;
+  }
+  .station-context em {
+    display: none;
+  }
+  .station-context small {
+    margin-left: auto;
+  }
+  .experience .detail-panel {
+    width: 310px;
+  }
+  .experience--inspecting .station-selector {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .station-hotspot {
+    padding: 5px 7px;
+    gap: 5px !important;
+  }
+  .station-hotspot strong {
+    font-size: 8px;
+  }
+  .station-hotspot small {
+    display: none;
+  }
+  .station-hotspot__number {
+    font-size: 9px;
+  }
+  .experience .intro-copy {
+    top: 105px;
+  }
+  .experience .intro-copy h1 {
+    font-size: 22px;
+  }
+}
+@media (max-width: 500px) {
+  .experience .detail-panel {
+    width: 100%;
+  }
+  .experience--station .station-context {
+    font-size: 9px;
+  }
+  .station-selector {
+    bottom: 126px;
+  }
+  .experience .view-selector {
+    bottom: 78px;
+  }
+  .experience .energy-summary {
+    bottom: 250px;
+  }
+  .experience .topbar .energy-button span {
+    display: none;
+  }
+  .station-hotspot__number {
+    padding: 4px;
+  }
+  .experience .scene-tools {
+    right: 15px;
+    top: 36%;
+  }
+  .station-hotspot strong {
+    display: none;
+  }
+}
+.experience--station .energy-summary {
+  display: none;
+}
+.inspection-buttons {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.experience--station .scene-caption {
+  display: none;
+}
 :root {
   font-family: 'DM Sans', 'Noto Sans SC', sans-serif;
   color: #3c4940;

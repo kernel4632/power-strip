@@ -3,131 +3,164 @@ import {
   CIRCUIT_LIMIT,
   DEVICE_CATALOG,
   DEVICE_MAP,
+  STATIONS,
+  STATION_MAP,
+  stationDevices,
   VOLTAGE,
 } from '../data/catalog'
 import { usePowerStore } from '../store/usePowerStore'
+import type { DeviceId, StationId } from '../types'
 import { Icon } from './Icon'
 import { PowerChart } from './PowerChart'
 
 export function PowerPanel() {
-  const state = usePowerStore()
-  const closeButton = useRef<HTMLButtonElement>(null)
-  const panel = useRef<HTMLElement>(null)
+  const state = usePowerStore(),
+    panel = useRef<HTMLElement>(null),
+    close = useRef<HTMLButtonElement>(null)
   const open = state.selected !== null
+  const spec = state.selected?.includes('-')
+    ? DEVICE_MAP[state.selected as DeviceId]
+    : null
+  const station = spec
+    ? STATION_MAP[spec.stationId]
+    : state.selected && state.selected !== 'room'
+      ? STATION_MAP[state.selected as StationId]
+      : null
+  const devices = station ? stationDevices(station.id) : DEVICE_CATALOG
+  const device = spec ? state.devices[spec.id] : null
+  const watts = device
+    ? device.watts
+    : devices.reduce((sum, d) => sum + state.devices[d.id].watts, 0)
+  const energy = device
+    ? device.energyWh
+    : devices.reduce((sum, d) => sum + state.devices[d.id].energyWh, 0)
+  const limit = spec?.ratedWatts ?? station?.limit ?? CIRCUIT_LIMIT
+  const active =
+    state.masterOn &&
+    (station ? state.strips[station.id] : true) &&
+    (device ? device.on : true)
   useEffect(() => {
     panel.current?.scrollTo({ top: 0 })
   }, [state.selected])
   useEffect(() => {
     if (!open) return
     const previous = document.activeElement as HTMLElement | null
-    closeButton.current?.focus({ preventScroll: true })
+    close.current?.focus({ preventScroll: true })
     return () => {
       if (previous?.isConnected) previous.focus({ preventScroll: true })
     }
   }, [open])
-  const spec =
-    state.selected && state.selected !== 'strip'
-      ? DEVICE_MAP[state.selected]
-      : null
-  const device = spec ? state.devices[spec.id] : null
-  const total = Object.values(state.devices).reduce(
-    (sum, item) => sum + item.watts,
-    0,
-  )
-  const energy = Object.values(state.devices).reduce(
-    (sum, item) => sum + item.energyWh,
-    0,
-  )
-  const watts = device?.watts ?? total
-  const limit = spec?.ratedWatts ?? CIRCUIT_LIMIT
-  const active = device ? device.on && state.masterOn : state.masterOn
-  const over = total > CIRCUIT_LIMIT
   return (
     <aside
       ref={panel}
       className={`detail-panel ${open ? 'detail-panel--open' : ''}`}
       inert={!open}
       aria-hidden={!open}
-      aria-label="设备与能源详情"
+      aria-label="床位与设备详情"
     >
       <div className="detail-panel__top">
         <span className="eyebrow">
-          {spec ? `DEVICE / ${spec.name}` : 'ENERGY INSIGHTS'}
+          {station
+            ? `BED ${station.number} / ${spec ? 'DEVICE' : 'POWER STRIP'}`
+            : 'ROOM 302 / ENERGY'}
         </span>
         <button
-          ref={closeButton}
+          ref={close}
           className="icon-button"
-          onClick={() => state.select(null)}
+          onClick={state.closePanel}
           aria-label="关闭详情面板"
         >
           <Icon name="close" />
         </button>
       </div>
       <div className="detail-heading">
-        <div className="device-glyph">
-          <Icon
-            name={
-              spec?.id === 'lamp'
-                ? 'sun'
-                : spec?.id === 'ac' || spec?.id === 'fan'
-                  ? 'rotate'
-                  : 'bolt'
-            }
-            size={29}
-          />
+        <div className="device-glyph" style={{ color: station?.color }}>
+          {station && !spec ? (
+            <b>{station.number}</b>
+          ) : (
+            <Icon name="bolt" size={28} />
+          )}
         </div>
         <div>
-          <h2>{spec?.name ?? '宿舍能源中枢'}</h2>
-          <p>{spec?.english ?? 'EVERY WATT TELLS A STORY'}</p>
+          <h2>
+            {spec?.name ??
+              (station ? `${station.name} · 独立插排` : '全寝能源概览')}
+          </h2>
+          <p>
+            {spec?.english ?? station?.theme ?? 'FOUR PLACES. ONE SHARED ROOM.'}
+          </p>
         </div>
       </div>
       <div className="detail-status">
-        <span
-          className={active ? 'status-dot' : 'status-dot status-dot--off'}
-        />
-        {active
-          ? '正在运行'
-          : state.masterOn
-            ? '待机 / 已关闭'
-            : '总电源已断开'}
+        <i className={active ? 'status-dot' : 'status-dot status-dot--off'} />
+        {!state.masterOn
+          ? '全寝总电源已关'
+          : station && !state.strips[station.id]
+            ? '本床位插排已关闭'
+            : device && !device.on
+              ? '设备待机'
+              : '正在供电'}
         <span className="simulation-tag">模拟数据</span>
       </div>
-      <section
-        className={`detail-power ${over && !spec ? 'detail-power--warning' : ''}`}
-      >
+      {spec && (
+        <p className="socket-assignment">
+          {station?.name} / 插孔 {spec.socket + 1} / 仅此床位回路
+        </p>
+      )}
+      <section className="detail-power">
         <span className="field-label">
-          {spec ? '当前设备功率' : '当前总功率'}
+          {spec ? '当前设备功率' : station ? '本床位总功率' : '全寝总功率'}
         </span>
         <div className="detail-power__value">
           {watts.toFixed(1)}
           <span>W</span>
         </div>
         <div className="thin-meter">
-          <span style={{ width: `${Math.min(100, (watts / limit) * 100)}%` }} />
+          <span
+            style={{
+              width: `${Math.min(100, (watts / limit) * 100)}%`,
+              background: station?.color,
+            }}
+          />
         </div>
         <div className="meter-caption">
           <span>
-            {spec ? `示例额定功率 ${limit} W` : `演示回路阈值 ${limit} W`}
+            {spec ? '示例额定功率' : '演示负载阈值'} {limit} W
           </span>
           <b>{((watts / limit) * 100).toFixed(1)}%</b>
         </div>
       </section>
       <div className="power-switch-row">
         <div>
-          <strong>{spec ? '设备电源' : '总电源开关'}</strong>
+          <strong>
+            {spec ? '设备电源' : station ? '此床位插排总开关' : '全寝总电源'}
+          </strong>
           <p>
-            {spec ? '同步控制场景中的电器状态' : '控制演示能源网络内的全部设备'}
+            {station ? '不改变其他三个床位的电源状态' : '控制所有床位上游电源'}
           </p>
         </div>
         <button
-          className={`toggle-switch ${active ? 'toggle-switch--on' : ''}`}
           role="switch"
-          aria-checked={active}
-          aria-label={spec ? `${spec.name}电源` : '总电源'}
-          onClick={() =>
-            spec ? state.toggle(spec.id) : state.setMaster(!state.masterOn)
+          aria-label={
+            spec
+              ? `${spec.name}电源`
+              : station
+                ? `${station.name}插排电源`
+                : '全寝总电源'
           }
-          disabled={!!spec && !state.masterOn}
+          aria-checked={active}
+          className={`toggle-switch ${active ? 'toggle-switch--on' : ''}`}
+          disabled={
+            (!!spec && (!state.masterOn || !state.strips[spec.stationId])) ||
+            (!!station && !state.masterOn)
+          }
+          onClick={() =>
+            spec
+              ? state.toggle(spec.id)
+              : station
+                ? state.setStrip(station.id, !state.strips[station.id])
+                : state.setMaster(!state.masterOn)
+          }
         >
           <span />
         </button>
@@ -135,9 +168,9 @@ export function PowerPanel() {
       {spec && device && (
         <div className="level-control">
           <label htmlFor="device-level">
-            {spec.id === 'lamp'
+            {spec.kind === 'lamp'
               ? '灯光亮度'
-              : spec.id === 'fan'
+              : spec.kind === 'fan'
                 ? '风扇转速'
                 : '模拟负载'}
             <b>{Math.round(device.level * 100)}%</b>
@@ -149,78 +182,92 @@ export function PowerPanel() {
             max="100"
             step="5"
             value={Math.round(device.level * 100)}
-            onChange={(event) =>
-              state.setLevel(spec.id, Number(event.target.value) / 100)
+            onChange={(e) =>
+              state.setLevel(spec.id, Number(e.target.value) / 100)
             }
             disabled={!active}
           />
-          <div className="range-labels">
-            <span>轻柔 · 10%</span>
-            <span>满载 · 100%</span>
-          </div>
         </div>
       )}
       <section className="detail-section">
         <div className="section-heading">
           <h3>功率轨迹</h3>
-          <span>
-            <i className="status-dot" /> LIVE
-          </span>
+          <span>LIVE · 1 Hz</span>
         </div>
-        <PowerChart history={state.history} device={spec?.id} />
+        <PowerChart
+          history={state.history}
+          device={spec?.id}
+          station={station?.id}
+        />
       </section>
       <div className="detail-metrics">
         <div>
           <span>本次模拟耗电</span>
           <strong>
-            {((device?.energyWh ?? energy) / 1000).toFixed(4)}
+            {(energy / 1000).toFixed(4)}
             <small> kWh</small>
           </strong>
         </div>
         <div>
-          <span>估算电流 · {VOLTAGE}V</span>
+          <span>简化估算电流 · {VOLTAGE}V</span>
           <strong>
             {(watts / VOLTAGE).toFixed(2)}
             <small> A</small>
           </strong>
         </div>
       </div>
-      {!spec && (
+      {!spec && station && (
         <section className="detail-section">
           <div className="section-heading">
-            <h3>设备负载分布</h3>
-            <span>8 DEVICES</span>
+            <h3>四孔插排 · 连接明细</h3>
+            <span>1 DEVICE / SOCKET</span>
           </div>
           <div className="device-breakdown">
-            {DEVICE_CATALOG.map((item) => (
-              <button key={item.id} onClick={() => state.select(item.id)}>
-                <span
-                  className="device-breakdown__dot"
-                  style={{ background: item.color }}
-                />
-                <span>{item.name}</span>
+            {devices.map((d) => (
+              <button key={d.id} onClick={() => state.select(d.id)}>
+                <span className="socket-number">{d.socket + 1}</span>
+                <span>{d.name}</span>
                 <span className="device-breakdown__track">
                   <i
                     style={{
-                      width: `${total ? (state.devices[item.id].watts / total) * 100 : 0}%`,
-                      background: item.color,
+                      width: `${watts ? (state.devices[d.id].watts / watts) * 100 : 0}%`,
+                      background: station.color,
                     }}
                   />
                 </span>
-                <b>{state.devices[item.id].watts.toFixed(0)} W</b>
+                <b>{state.devices[d.id].watts.toFixed(1)} W</b>
                 <Icon name="arrow" size={13} />
               </button>
             ))}
           </div>
         </section>
       )}
-      {over && (
-        <div className="overload-note">
-          <Icon name="info" size={17} />
-          <span>
-            总负载已超过演示阈值。可关闭水壶或空调观察负载回落。这里只作提示，不模拟真实保护开关。
-          </span>
-        </div>
+      {!station && (
+        <section className="detail-section">
+          <div className="section-heading">
+            <h3>四个独立床位</h3>
+            <span>4 SEPARATE STRIPS</span>
+          </div>
+          <div className="station-breakdown">
+            {STATIONS.map((s) => {
+              const sum = stationDevices(s.id).reduce(
+                (n, d) => n + state.devices[d.id].watts,
+                0,
+              )
+              return (
+                <button key={s.id} onClick={() => state.selectStation(s.id)}>
+                  <i style={{ background: s.color }}>{s.number}</i>
+                  <span>
+                    {s.name}
+                    <small>{s.theme}</small>
+                  </span>
+                  <b>{sum.toFixed(1)} W</b>
+                  <Icon name="arrow" size={14} />
+                </button>
+              )
+            })}
+          </div>
+        </section>
       )}
       {spec && (
         <>
@@ -229,22 +276,63 @@ export function PowerPanel() {
             className="focus-button"
             onClick={() => {
               state.focus()
-              panel.current?.scrollTo({ top: 0, behavior: 'smooth' })
+              panel.current?.scrollTo({ top: 0 })
             }}
           >
             <Icon name="focus" size={17} />
-            聚焦此设备<span>FOCUS VIEW</span>
+            近距离检查模型<span>DETAIL VIEW</span>
           </button>
           <button
             className="back-overview"
-            onClick={() => state.select('strip')}
+            onClick={() => state.select(spec.stationId)}
           >
-            查看全屋能源概览 <Icon name="arrow" size={15} />
+            返回本床位插排 <Icon name="arrow" size={14} />
           </button>
         </>
       )}
+      {station && !spec && (
+        <div className="inspection-buttons">
+          <button
+            className="focus-button"
+            onClick={() => state.selectStation(station.id)}
+          >
+            <Icon name="focus" size={17} />
+            查看完整床位<span>STATION</span>
+          </button>
+          <button
+            className="focus-button"
+            onClick={() => {
+              state.inspect('strip')
+              state.closePanel()
+            }}
+          >
+            <Icon name="bolt" size={17} />
+            近看插头与走线<span>WIRING</span>
+          </button>
+          <button
+            className="focus-button"
+            onClick={() => {
+              state.inspect('bed')
+              state.closePanel()
+            }}
+          >
+            <Icon name="layers" size={17} />
+            近看上铺与护栏<span>LOFT BED</span>
+          </button>
+        </div>
+      )}
+      {watts > limit && (
+        <div className="overload-note">
+          当前负载超过演示阈值，仅作提示，不模拟真实断路保护。
+        </div>
+      )}
+      {station && (
+        <button className="back-overview" onClick={() => state.select('room')}>
+          查看全寝总用电 <Icon name="arrow" size={14} />
+        </button>
+      )}
       <p className="panel-disclaimer">
-        数值由本地模型生成，仅供交互可视化。非真实电表读数，非用电安全依据。
+        全部功耗均为模拟值。四个插排各自控制四件设备；仅用于空间交互演示，不作为真实用电安全依据。
       </p>
     </aside>
   )

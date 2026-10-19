@@ -37,7 +37,7 @@ export function Box({
       emissiveIntensity={intensity}
       map={texture}
       bumpMap={texture}
-      bumpScale={surface === 'fabric' ? 0.008 : 0.003}
+      bumpScale={surface === 'fabric' ? 0.0012 : 0.00015}
     />
   )
   return round > 0 ? (

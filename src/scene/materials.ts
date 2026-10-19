@@ -24,7 +24,7 @@ export function surfaceTexture(surface: Surface): CanvasTexture {
       const weave = (x % 4 < 2 ? 1 : -1) * (y % 4 < 2 ? 1 : -1)
       const value =
         surface === 'wood'
-          ? 231 + grain * 10 + noise * 9
+          ? 245 + grain * 2 + noise * 3
           : surface === 'fabric'
             ? 232 + weave * 10 + noise * 9
             : 243 + noise * 10

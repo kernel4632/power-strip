@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { CanvasTexture, SRGBColorSpace } from 'three'
-import type { Group, Mesh } from 'three'
-import { DEVICE_MAP } from '../data/catalog'
+import type { Group, Mesh, MeshBasicMaterial } from 'three'
+import { DEVICE_MAP, STATION_MAP } from '../data/catalog'
 import { usePowerStore } from '../store/usePowerStore'
 import type { DeviceId } from '../types'
 import { Box, Cylinder, Ring, Rod, Sphere } from './Geometry'
@@ -14,84 +14,80 @@ function Screen({
   height,
   on,
 }: {
-  kind: 'monitor' | 'laptop' | 'phone'
+  kind: 'monitor' | 'laptop' | 'tablet' | 'phone'
   width: number
   height: number
   on: boolean
 }) {
   const [texture] = useState(() => {
     const canvas = document.createElement('canvas')
-    canvas.width = kind === 'phone' ? 256 : 768
-    canvas.height = kind === 'phone' ? 512 : 432
-    const context = canvas.getContext('2d')!
-    const gradient = context.createLinearGradient(
-      0,
-      0,
-      canvas.width,
-      canvas.height,
-    )
-    gradient.addColorStop(0, kind === 'laptop' ? '#263d4e' : '#32685e')
-    gradient.addColorStop(1, '#102c31')
-    context.fillStyle = gradient
-    context.fillRect(0, 0, canvas.width, canvas.height)
+    canvas.width = 768
+    canvas.height = kind === 'phone' ? 1200 : 460
+    const c = canvas.getContext('2d')!
+    const gradient = c.createLinearGradient(0, 0, canvas.width, canvas.height)
+    gradient.addColorStop(0, '#314d58')
+    gradient.addColorStop(1, '#142d37')
+    c.fillStyle = gradient
+    c.fillRect(0, 0, canvas.width, canvas.height)
+    c.fillStyle = '#edf2e2'
+    c.font = '28px sans-serif'
+    c.fillText('ROOM 302 / PERSONAL WORKSPACE', 35, 53)
     if (kind === 'phone') {
-      context.fillStyle = '#efeedb'
-      context.font = '58px sans-serif'
-      context.fillText('09:41', 45, 150)
-      context.font = '18px sans-serif'
-      context.fillText('A little more present.', 24, 188)
-      context.strokeStyle = '#87d1a9'
-      context.lineWidth = 10
-      context.beginPath()
-      context.arc(128, 339, 51, 0, Math.PI * 1.7)
-      context.stroke()
-      context.font = '26px sans-serif'
-      context.fillText('78%', 102, 349)
+      c.font = '140px sans-serif'
+      c.fillText('09:41', 160, 330)
+      c.font = '34px sans-serif'
+      c.fillText('MAKE YOURSELF AT HOME', 130, 410)
+      c.strokeStyle = '#a9d5bc'
+      c.lineWidth = 20
+      c.beginPath()
+      c.arc(384, 780, 160, 0, 5.4)
+      c.stroke()
+      c.font = '70px sans-serif'
+      c.fillText('78%', 317, 805)
+    } else if (kind === 'tablet') {
+      c.fillStyle = '#d8d5c6'
+      c.fillRect(85, 85, 590, 320)
+      c.fillStyle = '#7b968e'
+      c.beginPath()
+      c.moveTo(200, 310)
+      c.lineTo(385, 130)
+      c.lineTo(566, 313)
+      c.closePath()
+      c.fill()
+      c.fillStyle = '#bc8e76'
+      c.fillRect(291, 249, 190, 102)
+      c.fillStyle = '#efe8d5'
+      c.fillRect(330, 270, 41, 80)
+      c.font = '18px monospace'
+      c.fillStyle = '#cad7ce'
+      c.fillText('CONCEPT STUDY / 004', 250, 440)
     } else {
-      context.fillStyle = '#ffffff16'
-      context.fillRect(22, 22, 724, 34)
-      ;['#da8c77', '#dcc28c', '#a3cba8'].forEach((color, i) => {
-        context.fillStyle = color
-        context.beginPath()
-        context.arc(42 + i * 20, 39, 5, 0, 7)
-        context.fill()
-      })
-      context.font = '15px monospace'
-      context.fillStyle = '#a5c5bd'
-      context.fillText(
+      c.fillStyle = '#132732'
+      c.fillRect(25, 83, 163, 340)
+      c.fillStyle = '#99beb5'
+      c.font = '18px monospace'
+      ;['Workspace', 'Projects', 'Research', 'Notes', 'Assets'].forEach(
+        (t, i) => c.fillText(t, 45, 120 + i * 51),
+      )
+      c.fillStyle = '#f1edda'
+      c.font = '38px sans-serif'
+      c.fillText(
         kind === 'monitor'
-          ? 'DORM LAB  /  ENERGY STUDIO'
-          : 'WORKSPACE  /  DESIGN NOTES',
-        139,
-        44,
+          ? 'Build something good.'
+          : 'A quieter kind of focus.',
+        213,
+        145,
       )
-      context.fillStyle = '#f3ecd8'
-      context.font = '46px sans-serif'
-      context.fillText(
-        kind === 'monitor' ? 'Make room for ideas.' : 'Less, but better.',
-        44,
-        128,
-      )
-      context.fillStyle = '#a7c7ba'
-      context.font = '17px monospace'
-      context.fillText('A SPACE TO LEARN. A PLACE TO BELONG.', 46, 163)
+      c.font = '18px monospace'
+      c.fillStyle = '#a9c4b8'
+      c.fillText('DESIGN / LEARN / EXPLORE', 214, 183)
       for (let i = 0; i < 3; i++) {
-        context.fillStyle = '#dcecd311'
-        context.fillRect(44 + i * 233, 201, 211, 160)
-        context.fillStyle = ['#b7d0b4', '#e3b694', '#92c7cd'][i]
-        context.font = '34px sans-serif'
-        context.fillText(['CREATE', 'FOCUS', 'GROW'][i], 61 + i * 233, 249)
-        for (let j = 0; j < 9; j++)
-          context.fillRect(
-            61 + i * 233 + j * 18,
-            329 - Math.sin(j * 0.65 + i) * 16 - j * 5,
-            10,
-            16 + Math.sin(j * 0.65 + i) * 16 + j * 5,
-          )
+        c.fillStyle = ['#819c91', '#c1a384', '#839da9'][i]
+        c.fillRect(214 + i * 171, 225, 148, 110)
+        c.fillStyle = '#d6e0d7'
+        c.fillRect(214 + i * 171, 351, 130, 5)
+        c.fillRect(214 + i * 171, 369, 95, 4)
       }
-      context.font = '13px monospace'
-      context.fillStyle = '#92afa6'
-      context.fillText('GOOD THINGS TAKE A LITTLE SPACE.', 46, 400)
     }
     const map = new CanvasTexture(canvas)
     map.colorSpace = SRGBColorSpace
@@ -102,471 +98,601 @@ function Screen({
     <mesh>
       <planeGeometry args={[width, height]} />
       <meshStandardMaterial
-        color={on ? '#ffffff' : '#172220'}
         map={on ? texture : null}
+        color={on ? '#ffffff' : '#152026'}
         emissiveMap={on ? texture : null}
         emissive={on ? '#ffffff' : '#000000'}
-        emissiveIntensity={on ? 0.65 : 0}
-        roughness={0.35}
+        emissiveIntensity={0.45}
+        roughness={0.4}
       />
     </mesh>
   )
 }
-
 function Monitor({ on }: { on: boolean }) {
   return (
     <group>
-      <Box
-        size={[0.41, 0.04, 0.29]}
-        position={[0, 0.03, 0]}
-        color="#868d85"
-        round={0.015}
-        metalness={0.65}
-      />
-      <Box
-        size={[0.09, 0.25, 0.06]}
-        position={[0, 0.17, -0.02]}
-        color="#818b84"
-        metalness={0.7}
-      />
-      <group position={[0, 0.57, 0]} rotation={[-0.05, 0, 0]}>
+      <StaticGeometry revision={on}>
         <Box
-          size={[1.1, 0.66, 0.065]}
-          color="#4b5651"
-          round={0.025}
-          metalness={0.45}
-        />
-        <group position={[0, 0.015, 0.034]}>
-          <Screen kind="monitor" width={1.045} height={0.575} on={on} />
-        </group>
-        <Box
-          size={[0.018, 0.004, 0.004]}
-          position={[0.47, -0.296, 0.035]}
-          color={on ? '#9be7ce' : '#777c70'}
-          emissive="#9be7ce"
-          intensity={on ? 1.5 : 0}
-        />
-        <Sphere
-          position={[0, 0.311, 0.034]}
-          scale={[0.009, 0.009, 0.004]}
-          color="#202a27"
-        />
-      </group>
-    </group>
-  )
-}
-
-function Laptop({ on }: { on: boolean }) {
-  return (
-    <group rotation={[0, -0.14, 0]}>
-      <Box
-        size={[0.77, 0.03, 0.52]}
-        position={[0, 0.025, 0]}
-        color="#a6b2ac"
-        round={0.012}
-        metalness={0.6}
-      />
-      <Box
-        size={[0.24, 0.003, 0.15]}
-        position={[0, 0.042, 0.12]}
-        color="#8e9c95"
-        round={0.001}
-      />
-      {Array.from({ length: 4 }, (_, row) =>
-        Array.from({ length: 11 }, (_, col) => (
-          <Box
-            key={`${row}-${col}`}
-            size={[0.047, 0.003, 0.038]}
-            position={[-0.3 + col * 0.059, 0.044, -0.17 + row * 0.05]}
-            color="#35423d"
-            emissive={on ? '#698d85' : '#000000'}
-            intensity={0.25}
-          />
-        )),
-      )}
-      <group position={[0, 0.26, -0.25]} rotation={[-0.2, 0, 0]}>
-        <Box
-          size={[0.77, 0.46, 0.025]}
-          color="#84948b"
+          size={[0.4, 0.035, 0.27]}
+          position={[0, 0.0175, 0]}
+          color="#9aaba6"
           round={0.012}
           metalness={0.6}
         />
-        <group position={[0, 0.006, 0.014]}>
-          <Screen kind="laptop" width={0.715} height={0.4} on={on} />
-        </group>
+        <Box
+          size={[0.075, 0.28, 0.06]}
+          position={[0, 0.16, -0.02]}
+          color="#8a9b95"
+          round={0.009}
+          metalness={0.5}
+        />
+        <Box
+          size={[1.1, 0.64, 0.065]}
+          position={[0, 0.585, -0.02]}
+          color="#3f4b4b"
+          round={0.02}
+          metalness={0.2}
+        />
+        <Box
+          size={[0.95, 0.035, 0.035]}
+          position={[0, 0.301, 0.022]}
+          color="#596b67"
+        />
+        <Sphere
+          position={[0, 0.887, 0.015]}
+          scale={[0.006, 0.006, 0.004]}
+          color="#182426"
+        />
+        <Box
+          size={[0.018, 0.005, 0.004]}
+          position={[0.477, 0.296, 0.018]}
+          color={on ? '#a8dfc0' : '#6e7770'}
+          emissive="#9bd5bc"
+          intensity={on ? 1 : 0}
+        />
+        {Array.from({ length: 12 }, (_, i) => (
+          <Box
+            key={i}
+            size={[0.032, 0.035, 0.003]}
+            position={[-0.36 + i * 0.065, 0.76, -0.054]}
+            color="#263a35"
+          />
+        ))}
+      </StaticGeometry>
+      <group position={[0, 0.601, 0.0135]}>
+        <Screen kind="monitor" width={1.045} height={0.558} on={on} />
       </group>
     </group>
   )
 }
-
+function Laptop({ on }: { on: boolean }) {
+  return (
+    <group>
+      <StaticGeometry revision={0}>
+        <Box
+          size={[0.77, 0.026, 0.52]}
+          position={[0, 0.013, 0]}
+          color="#aebbb8"
+          round={0.011}
+          metalness={0.6}
+        />
+        <Box
+          size={[0.24, 0.001, 0.145]}
+          position={[0, 0.027, 0.126]}
+          color="#8b9c97"
+          round={0.0005}
+        />
+        {Array.from({ length: 4 }, (_, r) =>
+          Array.from({ length: 11 }, (_, c) => (
+            <Box
+              key={`${r}-${c}`}
+              size={[0.047, 0.002, 0.035]}
+              position={[-0.295 + c * 0.059, 0.028, -0.175 + r * 0.049]}
+              color="#344842"
+              round={0.001}
+            />
+          )),
+        )}
+        <Cylinder
+          radius={0.015}
+          height={0.62}
+          rotation={[0, 0, Math.PI / 2]}
+          position={[0, 0.029, -0.238]}
+          color="#80968c"
+          metalness={0.6}
+        />
+        {[-0.16, -0.08].map((z) => (
+          <Box
+            key={z}
+            size={[0.002, 0.009, 0.035]}
+            position={[0.386, 0.014, z]}
+            color="#2f423e"
+          />
+        ))}
+      </StaticGeometry>
+      <group position={[0, 0.032, -0.238]} rotation={[-0.13, 0, 0]}>
+        <Box
+          size={[0.77, 0.455, 0.018]}
+          position={[0, 0.2275, 0]}
+          color="#8c9e96"
+          round={0.008}
+          metalness={0.5}
+        />
+        <group position={[0, 0.237, 0.0095]}>
+          <Screen kind="laptop" width={0.723} height={0.399} on={on} />
+        </group>
+        <Sphere
+          position={[0, 0.444, 0.01]}
+          scale={[0.004, 0.004, 0.002]}
+          color="#21342e"
+        />
+      </group>
+    </group>
+  )
+}
 function Lamp({ on, level }: { on: boolean; level: number }) {
   return (
     <group>
       <Cylinder
-        radius={0.16}
+        radius={0.155}
         height={0.035}
-        position={[0, 0.025, 0]}
-        color="#d8cbb2"
-        metalness={0.25}
+        position={[0, 0.0175, 0]}
+        color="#d6c7a8"
+        metalness={0.3}
       />
       <Rod
-        from={[0, 0.04, 0]}
-        to={[0.04, 0.39, -0.04]}
-        radius={0.023}
-        color="#c0a276"
+        from={[0, 0.035, 0]}
+        to={[0.03, 0.39, -0.03]}
+        radius={0.019}
+        color="#ab9e79"
       />
       <Sphere
-        position={[0.04, 0.39, -0.04]}
-        scale={[0.045, 0.045, 0.045]}
-        color="#8e7a59"
+        position={[0.03, 0.39, -0.03]}
+        scale={[0.037, 0.037, 0.037]}
+        color="#9c8e6d"
       />
       <Rod
-        from={[0.04, 0.39, -0.04]}
-        to={[-0.16, 0.68, 0.04]}
-        radius={0.02}
-        color="#c0a276"
+        from={[0.03, 0.39, -0.03]}
+        to={[-0.13, 0.65, 0.03]}
+        radius={0.017}
+        color="#b7a781"
       />
-      <group position={[-0.16, 0.65, 0.04]} rotation={[0, 0, 0.24]}>
-        <Cylinder radius={0.19} top={0.08} height={0.17} color="#e0c99c" />
-        <mesh position={[0, -0.087, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.175, 32]} />
-          <meshStandardMaterial
-            color={on ? '#fff3cf' : '#b5a78e'}
-            emissive="#ffdb92"
-            emissiveIntensity={on ? 2.5 * level : 0}
-          />
-        </mesh>
-      </group>
-      <pointLight
-        position={[-0.16, 0.5, 0.08]}
-        color="#ffd298"
-        intensity={on ? level * 1.9 : 0}
-        distance={3}
-        decay={2}
+      <Cylinder
+        radius={0.18}
+        top={0.065}
+        height={0.15}
+        position={[-0.13, 0.65, 0.03]}
+        color="#d9caab"
       />
+      <mesh position={[-0.13, 0.573, 0.03]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.166, 32]} />
+        <meshStandardMaterial
+          color="#fff0cf"
+          emissive="#ffdf9d"
+          emissiveIntensity={on ? level * 2 : 0}
+        />
+      </mesh>
       <Box
-        size={[0.035, 0.006, 0.055]}
-        position={[0.06, 0.046, 0.02]}
-        color="#937d59"
+        size={[0.04, 0.005, 0.045]}
+        position={[0.05, 0.037, 0.035]}
+        color="#9b906f"
         round={0.002}
+      />
+      <pointLight
+        position={[-0.13, 0.48, 0.03]}
+        color="#ffe0ad"
+        intensity={on ? level * 0.55 : 0}
+        distance={1.4}
       />
     </group>
   )
 }
-
 function Fan({ on, level }: { on: boolean; level: number }) {
-  const blades = useRef<Group>(null)
-  const head = useRef<Group>(null)
-  const speed = useRef(0)
+  const blades = useRef<Group>(null),
+    head = useRef<Group>(null),
+    speed = useRef(0)
   useFrame(({ clock, invalidate }, delta) => {
     const dt = Math.min(delta, 0.1)
     speed.current +=
-      ((on ? 24 * level : 0) - speed.current) * (1 - Math.exp(-dt * 2))
+      ((on ? level * 23 : 0) - speed.current) * (1 - Math.exp(-dt * 2))
     if (blades.current) blades.current.rotation.z -= speed.current * dt
-    if (
-      !on &&
-      speed.current > 0.03 &&
-      !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    )
-      invalidate()
     if (head.current && on)
-      head.current.rotation.y = Math.sin(clock.elapsedTime * 0.55) * 0.22
+      head.current.rotation.y = Math.sin(clock.elapsedTime * 0.5) * 0.16
+    if (!on && speed.current > 0.05) invalidate()
   })
   return (
     <group>
       <Cylinder
-        radius={0.16}
-        height={0.04}
-        position={[0, 0.035, 0]}
-        color="#b5bfad"
+        radius={0.155}
+        height={0.035}
+        position={[0, 0.0175, 0]}
+        color="#b5c6b8"
       />
       <Rod
-        from={[0, 0.05, 0]}
-        to={[0, 0.4, 0]}
-        radius={0.035}
-        color="#9da99a"
+        from={[0, 0.035, 0]}
+        to={[0, 0.43, 0]}
+        radius={0.028}
+        color="#98ae9f"
       />
-      <group ref={head} position={[0, 0.48, 0]}>
+      <group ref={head} position={[0, 0.47, 0]}>
         <Cylinder
-          radius={0.08}
-          height={0.15}
+          radius={0.065}
+          height={0.12}
+          position={[0, 0, -0.015]}
           rotation={[Math.PI / 2, 0, 0]}
-          color="#9caa9b"
+          color="#91aa9a"
         />
         <Ring
           radius={0.24}
-          tube={0.015}
-          position={[0, 0, 0.07]}
-          color="#d4ddc9"
+          tube={0.012}
+          position={[0, 0, 0.06]}
+          color="#8aa18f"
         />
-        {[0.08, 0.14, 0.19, 0.24].map((r) => (
+        <Ring
+          radius={0.235}
+          tube={0.009}
+          position={[0, 0, -0.07]}
+          color="#8aa18f"
+        />
+        {[0.09, 0.14, 0.19, 0.235].map((r) => (
           <Ring
             key={r}
             radius={r}
-            tube={0.004}
-            position={[0, 0, 0.113]}
-            color="#7a8b7c"
+            tube={0.0035}
+            position={[0, 0, 0.099]}
+            color="#7c9480"
           />
         ))}
-        {Array.from({ length: 12 }, (_, i) => {
-          const a = (i * Math.PI) / 6
+        {Array.from({ length: 16 }, (_, i) => {
+          const a = (i * Math.PI) / 8
           return (
             <Rod
               key={i}
-              from={[0, 0, 0.12]}
-              to={[Math.cos(a) * 0.235, Math.sin(a) * 0.235, 0.08]}
-              radius={0.0035}
-              color="#849883"
+              from={[0, 0, 0.106]}
+              to={[Math.cos(a) * 0.234, Math.sin(a) * 0.234, 0.064]}
+              radius={0.0025}
+              color="#8da48f"
             />
           )
         })}
-        <group ref={blades} position={[0, 0, 0.06]}>
-          {Array.from({ length: 3 }, (_, i) => (
+        <group ref={blades} position={[0, 0, 0.035]}>
+          {[0, 1, 2].map((i) => (
             <group key={i} rotation={[0, 0, (i * Math.PI * 2) / 3]}>
               <Sphere
-                position={[0.04, 0.11, 0]}
-                scale={[0.09, 0.12, 0.012]}
-                color="#9bb6aa"
+                position={[0.035, 0.105, 0]}
+                scale={[0.075, 0.105, 0.009]}
+                color="#abc4b7"
               />
             </group>
           ))}
         </group>
         <Cylinder
-          radius={0.045}
-          height={0.02}
+          radius={0.038}
+          height={0.018}
           rotation={[Math.PI / 2, 0, 0]}
-          position={[0, 0, 0.133]}
-          color="#c4ceb9"
+          position={[0, 0, 0.12]}
+          color="#c4d4c7"
         />
       </group>
     </group>
   )
 }
-
 function Phone({ on }: { on: boolean }) {
   return (
-    <group rotation={[0, -0.25, 0]}>
+    <group>
       <Cylinder
-        radius={0.14}
-        height={0.025}
-        position={[0, 0.02, 0]}
-        color="#9faba1"
-        metalness={0.4}
+        radius={0.13}
+        height={0.02}
+        position={[0, 0.01, 0]}
+        color="#a2b3a9"
       />
-      <group position={[0, 0.055, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <Box size={[0.14, 0.285, 0.015]} color="#343e39" round={0.006} />
-        <group position={[0, 0, 0.009]}>
-          <Screen kind="phone" width={0.125} height={0.26} on={on} />
+      <group position={[0, 0.027, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <Box size={[0.14, 0.282, 0.014]} color="#354947" round={0.006} />
+        <group position={[0, 0, 0.0075]}>
+          <Screen kind="phone" width={0.125} height={0.259} on={on} />
         </group>
         <Box
-          size={[0.045, 0.009, 0.002]}
-          position={[0, 0.117, 0.012]}
-          color="#172b27"
+          size={[0.037, 0.009, 0.002]}
+          position={[0, 0.118, 0.009]}
+          color="#1a2b29"
           round={0.001}
         />
       </group>
     </group>
   )
 }
-
-function Steam({ on }: { on: boolean }) {
-  const group = useRef<Group>(null)
+function Tower({ on }: { on: boolean }) {
+  const rotor = useRef<Group>(null)
+  useFrame((_, delta) => {
+    if (on && rotor.current)
+      rotor.current.rotation.z += Math.min(delta, 0.1) * 6
+  })
+  return (
+    <group>
+      <Box
+        size={[0.28, 0.49, 0.42]}
+        position={[0, 0.275, 0]}
+        color="#3d5055"
+        round={0.012}
+        metalness={0.25}
+      />
+      {[-0.09, 0.09].flatMap((x) =>
+        [-0.14, 0.14].map((z) => (
+          <Cylinder
+            key={`${x}-${z}`}
+            radius={0.025}
+            height={0.03}
+            position={[x, 0.015, z]}
+            color="#293d3c"
+          />
+        )),
+      )}
+      <Box
+        size={[0.245, 0.45, 0.008]}
+        position={[0, 0.275, 0.213]}
+        color="#283e42"
+        round={0.003}
+      />
+      {[0.16, 0.35].map((y) => (
+        <group key={y} position={[0, y, 0.222]}>
+          <Ring
+            radius={0.075}
+            tube={0.004}
+            color={on ? '#8ebbbc' : '#4d6461'}
+          />
+          <mesh>
+            <circleGeometry args={[0.067, 24]} />
+            <meshStandardMaterial color="#253c3c" />
+          </mesh>
+        </group>
+      ))}
+      <group ref={rotor} position={[0, 0.35, 0.225]}>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <group key={i} rotation={[0, 0, i * 1.256]}>
+            <Box
+              size={[0.018, 0.053, 0.002]}
+              position={[0, 0.031, 0]}
+              color="#71969a"
+              round={0.001}
+            />
+          </group>
+        ))}
+      </group>
+      {Array.from({ length: 9 }, (_, i) => (
+        <Box
+          key={i}
+          size={[0.002, 0.405, 0.003]}
+          position={[-0.096 + i * 0.024, 0.272, 0.229]}
+          color="#587278"
+        />
+      ))}
+      <Cylinder
+        radius={0.012}
+        height={0.004}
+        rotation={[Math.PI / 2, 0, 0]}
+        position={[0.084, 0.48, 0.22]}
+        color={on ? '#b4d9b8' : '#526964'}
+      />
+      {[0.036, 0.067].map((x) => (
+        <Box
+          key={x}
+          size={[0.019, 0.007, 0.003]}
+          position={[x, 0.435, 0.221]}
+          color="#142b29"
+        />
+      ))}
+      <Box
+        size={[0.005, 0.35, 0.3]}
+        position={[0.142, 0.275, 0]}
+        color="#4c6265"
+      />
+    </group>
+  )
+}
+function Speaker({ on, level }: { on: boolean; level: number }) {
+  const cone = useRef<Group>(null)
   useFrame(({ clock }) => {
-    if (!group.current) return
-    group.current.children.forEach((child, i) => {
-      const phase = (clock.elapsedTime * 0.3 + i / 7) % 1
-      child.position.set(
-        Math.sin(phase * 8 + i) * phase * 0.11,
-        phase * 0.75,
-        Math.cos(phase * 6 + i) * 0.04,
-      )
-      child.scale.setScalar(0.035 + phase * 0.085)
-      const mesh = child as Mesh
-      if ('opacity' in mesh.material)
-        mesh.material.opacity = on ? Math.sin(phase * Math.PI) * 0.14 : 0
+    if (cone.current)
+      cone.current.position.z =
+        0.112 + (on ? Math.sin(clock.elapsedTime * 25) * 0.001 * level : 0)
+  })
+  return (
+    <group>
+      <Box
+        size={[0.25, 0.4, 0.22]}
+        position={[0, 0.2, 0]}
+        color="#b69a76"
+        round={0.014}
+        surface="wood"
+      />
+      <Box
+        size={[0.218, 0.367, 0.007]}
+        position={[0, 0.2, 0.113]}
+        color="#364e48"
+        round={0.004}
+      />
+      <group ref={cone} position={[0, 0.147, 0.12]}>
+        <Cylinder
+          radius={0.077}
+          height={0.005}
+          rotation={[Math.PI / 2, 0, 0]}
+          color="#6a8275"
+        />
+        <Ring radius={0.074} tube={0.004} color="#a4b09a" />
+        <Sphere
+          scale={[0.028, 0.028, 0.012]}
+          position={[0, 0, 0.008]}
+          color="#3b5348"
+        />
+      </group>
+      <Cylinder
+        radius={0.032}
+        height={0.006}
+        rotation={[Math.PI / 2, 0, 0]}
+        position={[0, 0.295, 0.12]}
+        color="#96a997"
+      />
+      <Cylinder
+        radius={0.008}
+        height={0.005}
+        rotation={[Math.PI / 2, 0, 0]}
+        position={[0.078, 0.342, 0.12]}
+        color={on ? '#b8d9a5' : '#627b6b'}
+      />
+      {Array.from({ length: 9 }, (_, i) => (
+        <Box
+          key={i}
+          size={[0.0018, 0.34, 0.001]}
+          position={[-0.09 + i * 0.022, 0.2, 0.126]}
+          color="#b0b6a2"
+        />
+      ))}
+    </group>
+  )
+}
+function Tablet({ on }: { on: boolean }) {
+  return (
+    <group>
+      <Box
+        size={[0.48, 0.025, 0.31]}
+        position={[0, 0.0125, 0]}
+        color="#8da3a5"
+        round={0.009}
+      />
+      <Rod
+        from={[0, 0.025, -0.09]}
+        to={[0, 0.18, -0.075]}
+        radius={0.026}
+        color="#7c9193"
+      />
+      <group position={[0, 0.19, 0]} rotation={[-1.06, 0, 0]}>
+        <Box size={[0.76, 0.49, 0.025]} color="#374b53" round={0.013} />
+        <group position={[0.015, 0, 0.013]}>
+          <Screen kind="tablet" width={0.65} height={0.43} on={on} />
+        </group>
+        {[-0.14, -0.06, 0.02, 0.1].map((y) => (
+          <Cylinder
+            key={y}
+            radius={0.011}
+            height={0.003}
+            rotation={[Math.PI / 2, 0, 0]}
+            position={[-0.346, y, 0.014]}
+            color="#8dabae"
+          />
+        ))}
+      </group>
+    </group>
+  )
+}
+function Printer({ on }: { on: boolean }) {
+  return (
+    <group>
+      <Box
+        size={[0.46, 0.26, 0.4]}
+        position={[0, 0.13, 0]}
+        color="#d8dfd5"
+        round={0.018}
+      />
+      <Box
+        size={[0.42, 0.025, 0.34]}
+        position={[0, 0.272, -0.015]}
+        color="#b2c0b5"
+        round={0.01}
+      />
+      <Box
+        size={[0.33, 0.036, 0.004]}
+        position={[0, 0.109, 0.202]}
+        color="#526a60"
+      />
+      <Box
+        size={[0.34, 0.012, 0.16]}
+        position={[0, 0.086, 0.23]}
+        color="#b0bfb2"
+        round={0.005}
+      />
+      <Box
+        size={[0.24, 0.0015, 0.105]}
+        position={[0, 0.094, 0.255]}
+        color="#f4f0e2"
+      />
+      {[0, 1, 2].map((i) => (
+        <Box
+          key={i}
+          size={[0.16 - i * 0.025, 0.001, 0.002]}
+          position={[0, 0.096, 0.27 + i * 0.015]}
+          color="#b4b9ac"
+        />
+      ))}
+      <Box
+        size={[0.085, 0.009, 0.045]}
+        position={[0.125, 0.291, 0.11]}
+        color="#69887c"
+        emissive="#82b6a7"
+        intensity={on ? 0.5 : 0}
+      />
+      <Cylinder
+        radius={0.012}
+        height={0.005}
+        position={[0.185, 0.291, 0.11]}
+        color="#839a87"
+      />
+    </group>
+  )
+}
+function Humidifier({ on }: { on: boolean }) {
+  const mist = useRef<Group>(null)
+  useFrame(({ clock }) => {
+    mist.current?.children.forEach((child, i) => {
+      const p = (clock.elapsedTime * 0.25 + i / 5) % 1
+      child.position.set(Math.sin(p * 6 + i) * p * 0.025, 0.35 + p * 0.27, 0)
+      child.scale.setScalar(0.008 + p * 0.022)
+      ;((child as Mesh).material as MeshBasicMaterial).opacity = on
+        ? Math.sin(p * Math.PI) * 0.1
+        : 0
     })
   })
   return (
-    <group ref={group} position={[0, 0.57, 0]}>
-      {Array.from({ length: 7 }, (_, i) => (
-        <mesh key={i}>
-          <sphereGeometry args={[1, 10, 8]} />
-          <meshBasicMaterial
-            color="#fff9e9"
-            transparent
-            opacity={0}
-            depthWrite={false}
-          />
-        </mesh>
-      ))}
-    </group>
-  )
-}
-
-function Kettle({ on }: { on: boolean }) {
-  return (
     <group>
       <Cylinder
-        radius={0.23}
-        height={0.04}
-        position={[0, 0.02, 0]}
-        color="#4e5d54"
+        radius={0.14}
+        top={0.12}
+        height={0.31}
+        position={[0, 0.155, 0]}
+        color="#dfd9c6"
       />
       <Cylinder
-        radius={0.2}
-        top={0.155}
-        height={0.38}
-        position={[0, 0.23, 0]}
-        color="#e3dbc9"
-        roughness={0.3}
-        metalness={0.35}
+        radius={0.119}
+        height={0.016}
+        position={[0, 0.318, 0]}
+        color="#bcc7b1"
       />
       <Cylinder
-        radius={0.157}
-        height={0.035}
-        position={[0, 0.44, 0]}
-        color="#889284"
-        metalness={0.5}
+        radius={0.017}
+        height={0.003}
+        position={[0, 0.328, 0]}
+        color="#4f6d5d"
       />
-      <Sphere
-        position={[0, 0.48, 0]}
-        scale={[0.045, 0.035, 0.045]}
-        color="#5c675b"
-      />
-      <group position={[0.21, 0.25, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <Ring radius={0.155} tube={0.025} color="#7f8b79" />
-      </group>
-      <Cylinder
-        radius={0.04}
-        top={0.025}
-        height={0.22}
-        position={[-0.19, 0.32, 0]}
-        rotation={[0, 0, -0.7]}
-        color="#d4cbb8"
-        metalness={0.4}
+      <Ring
+        radius={0.139}
+        tube={0.003}
+        rotation={[Math.PI / 2, 0, 0]}
+        position={[0, 0.06, 0]}
+        color={on ? '#b5d5ac' : '#adb9a2'}
       />
       <Box
-        size={[0.035, 0.17, 0.008]}
-        position={[0, 0.24, 0.192]}
-        color="#9bb3ae"
-        round={0.003}
+        size={[0.018, 0.055, 0.005]}
+        position={[0, 0.15, 0.139]}
+        color="#aec5bd"
+        round={0.002}
       />
-      <Box
-        size={[0.06, 0.015, 0.01]}
-        position={[0, 0.065, 0.195]}
-        color={on ? '#ecac6c' : '#7e877b'}
-        emissive="#ffb168"
-        intensity={on ? 2 : 0}
-      />
-      <Steam on={on} />
-    </group>
-  )
-}
-
-function Fridge({ on }: { on: boolean }) {
-  return (
-    <group>
-      <Box
-        size={[0.84, 1.2, 0.84]}
-        position={[0, 0.62, 0]}
-        color="#c1ccbb"
-        round={0.055}
-        metalness={0.14}
-      />
-      <Box
-        size={[0.77, 0.36, 0.075]}
-        position={[0, 1, 0.445]}
-        color="#d2d8c9"
-        round={0.025}
-      />
-      <Box
-        size={[0.77, 0.73, 0.075]}
-        position={[0, 0.43, 0.445]}
-        color="#d2d8c9"
-        round={0.025}
-      />
-      {[0.89, 0.7].map((y) => (
-        <Box
-          key={y}
-          size={[0.025, 0.11, 0.035]}
-          position={[-0.29, y, 0.494]}
-          color="#8f9d89"
-          round={0.006}
-          metalness={0.6}
-        />
-      ))}
-      <Box
-        size={[0.14, 0.14, 0.004]}
-        position={[0.13, 0.92, 0.488]}
-        rotation={[0, 0, 0.12]}
-        color="#d0a173"
-      />
-      <Box
-        size={[0.12, 0.1, 0.005]}
-        position={[0.13, 0.92, 0.492]}
-        rotation={[0, 0, 0.12]}
-        color="#7e9e8d"
-      />
-      <Box
-        size={[0.018, 0.018, 0.008]}
-        position={[0.29, 1.11, 0.49]}
-        color={on ? '#91c899' : '#8c9382'}
-        emissive="#91c899"
-        intensity={on ? 1 : 0}
-      />
-      {Array.from({ length: 8 }, (_, i) => (
-        <Box
-          key={i}
-          size={[0.005, 0.14, 0.44]}
-          position={[0.424, 0.17, -0.16 + i * 0.04]}
-          color="#96a38f"
-        />
-      ))}
-    </group>
-  )
-}
-
-function AirConditioner({ on }: { on: boolean }) {
-  const air = useRef<Group>(null)
-  useFrame(({ clock }) => {
-    if (air.current)
-      air.current.children.forEach((child, i) => {
-        const phase = (clock.elapsedTime * 0.35 + i * 0.22) % 1
-        child.position.y = -0.3 - phase * 0.8
-        child.position.z = phase * 0.45
-        child.scale.y = Math.sin(phase * Math.PI)
-      })
-  })
-  return (
-    <group>
-      <Box size={[1.65, 0.43, 0.34]} color="#e8e8dc" round={0.055} />
-      <Box
-        size={[1.43, 0.045, 0.075]}
-        position={[0, -0.16, 0.17]}
-        color="#788b7f"
-        round={0.008}
-      />
-      <Box
-        size={[1.38, 0.018, 0.1]}
-        position={[0, -0.16, 0.21]}
-        rotation={[on ? -0.35 : 0, 0, 0]}
-        color="#d3dbce"
-      />
-      <Box
-        size={[0.1, 0.035, 0.005]}
-        position={[0.59, 0.035, 0.176]}
-        color={on ? '#b0d7c4' : '#c1ccc0'}
-        emissive="#b0e5c8"
-        intensity={on ? 0.8 : 0}
-      />
-      <group ref={air} visible={on}>
-        {[0, 1, 2, 3].map((i) => (
-          <mesh key={i} position={[-0.54 + i * 0.36, -0.4, 0.15]}>
-            <capsuleGeometry args={[0.008, 0.23, 3, 5]} />
+      <group ref={mist}>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <mesh key={i}>
+            <sphereGeometry args={[1, 8, 6]} />
             <meshBasicMaterial
-              color="#c1e5e0"
+              color="#e9f4ec"
               transparent
-              opacity={0.3}
+              opacity={0}
               depthWrite={false}
             />
           </mesh>
@@ -575,16 +701,66 @@ function AirConditioner({ on }: { on: boolean }) {
     </group>
   )
 }
-
+function Headphones({ on }: { on: boolean }) {
+  return (
+    <group>
+      <Box
+        size={[0.24, 0.018, 0.22]}
+        position={[0, 0.009, 0]}
+        color="#7f968a"
+        round={0.008}
+      />
+      <Rod
+        from={[0, 0.018, 0]}
+        to={[0, 0.344, 0]}
+        radius={0.009}
+        color="#6b8579"
+      />
+      <Box
+        size={[0.1, 0.02, 0.055]}
+        position={[0, 0.344, 0]}
+        color="#879e91"
+        round={0.007}
+      />
+      <mesh position={[0, 0.25, 0]}>
+        <torusGeometry args={[0.115, 0.012, 8, 32, Math.PI]} />
+        <meshStandardMaterial color="#4b625c" />
+      </mesh>
+      {[-0.113, 0.113].map((x) => (
+        <group key={x}>
+          <Box
+            size={[0.042, 0.105, 0.065]}
+            position={[x, 0.205, 0]}
+            color="#3f5851"
+            round={0.015}
+          />
+          <Box
+            size={[0.012, 0.087, 0.06]}
+            position={[x - Math.sign(x) * 0.026, 0.205, 0]}
+            color="#72877a"
+            round={0.005}
+            surface="fabric"
+          />
+        </group>
+      ))}
+      <Box
+        size={[0.018, 0.003, 0.008]}
+        position={[0.08, 0.02, 0.065]}
+        color={on ? '#bfddb3' : '#879d8c'}
+      />
+    </group>
+  )
+}
 export function Appliance({ id }: { id: DeviceId }) {
-  const spec = DEVICE_MAP[id]
-  const on = usePowerStore((state) => state.devices[id].on)
-  const level = usePowerStore((state) => state.devices[id].level)
-  const masterOn = usePowerStore((state) => state.masterOn)
-  const selected = usePowerStore((state) => state.selected === id)
-  const select = usePowerStore((state) => state.select)
-  const [hovered, setHovered] = useState(false)
-  const active = masterOn && on
+  const spec = DEVICE_MAP[id],
+    station = STATION_MAP[spec.stationId]
+  const on = usePowerStore((s) => s.devices[id].on),
+    level = usePowerStore((s) => s.devices[id].level)
+  const powered = usePowerStore((s) => s.masterOn && s.strips[spec.stationId]),
+    selected = usePowerStore((s) => s.selected === id),
+    select = usePowerStore((s) => s.select)
+  const [hovered, setHovered] = useState(false),
+    active = on && powered
   useEffect(() => {
     if (hovered) document.body.style.cursor = 'pointer'
     return () => {
@@ -594,49 +770,45 @@ export function Appliance({ id }: { id: DeviceId }) {
   return (
     <group
       position={spec.position}
-      onClick={(event) => {
-        event.stopPropagation()
-        if (event.delta < 5) select(id)
+      rotation={[0, station.rotation, 0]}
+      name={`device-${id}`}
+      userData={{ deviceId: id }}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (e.delta < 5) select(id)
       }}
-      onPointerOver={(event) => {
-        event.stopPropagation()
+      onPointerOver={(e) => {
+        e.stopPropagation()
         setHovered(true)
       }}
       onPointerOut={() => setHovered(false)}
     >
-      {id === 'monitor' && (
-        <StaticGeometry revision={active}>
-          <Monitor on={active} />
-        </StaticGeometry>
-      )}
-      {id === 'laptop' && (
-        <StaticGeometry revision={active}>
-          <Laptop on={active} />
-        </StaticGeometry>
-      )}
-      {id === 'lamp' && <Lamp on={active} level={level} />}
-      {id === 'fan' && <Fan on={active} level={level} />}
-      {id === 'phone' && <Phone on={active} />}
-      {id === 'kettle' && <Kettle on={active} />}
-      {id === 'fridge' && (
-        <StaticGeometry revision={active}>
-          <Fridge on={active} />
-        </StaticGeometry>
-      )}
-      {id === 'ac' && <AirConditioner on={active} />}
+      <group scale={spec.scale}>
+        {spec.kind === 'monitor' && <Monitor on={active} />}{' '}
+        {spec.kind === 'laptop' && <Laptop on={active} />}{' '}
+        {spec.kind === 'lamp' && <Lamp on={active} level={level} />}{' '}
+        {spec.kind === 'fan' && <Fan on={active} level={level} />}{' '}
+        {spec.kind === 'phone' && <Phone on={active} />}{' '}
+        {spec.kind === 'tower' && <Tower on={active} />}{' '}
+        {spec.kind === 'speaker' && <Speaker on={active} level={level} />}{' '}
+        {spec.kind === 'tablet' && <Tablet on={active} />}{' '}
+        {spec.kind === 'printer' && <Printer on={active} />}{' '}
+        {spec.kind === 'humidifier' && <Humidifier on={active} />}{' '}
+        {spec.kind === 'headphones' && <Headphones on={active} />}
+      </group>
       {(hovered || selected) && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.006, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
           <ringGeometry
             args={[
-              id === 'fridge' ? 0.52 : 0.31,
-              id === 'fridge' ? 0.535 : 0.322,
-              64,
+              Math.max(...spec.footprint) / 2 + 0.012,
+              Math.max(...spec.footprint) / 2 + 0.017,
+              48,
             ]}
           />
           <meshBasicMaterial
-            color="#e2a774"
+            color={station.color}
             transparent
-            opacity={0.8}
+            opacity={0.65}
             depthWrite={false}
           />
         </mesh>

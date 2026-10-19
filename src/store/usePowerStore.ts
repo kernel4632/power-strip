@@ -1,36 +1,35 @@
 import { create } from 'zustand'
-import { DEVICE_CATALOG } from '../data/catalog'
+import { DEVICE_CATALOG, DEVICE_MAP, STATIONS } from '../data/catalog'
 import type {
   CameraView,
   DeviceId,
   DeviceState,
+  InspectionPart,
   PowerSample,
   SceneMode,
+  Selection,
+  StationId,
 } from '../types'
 
 function initialDevices(): Record<DeviceId, DeviceState> {
   return Object.fromEntries(
-    DEVICE_CATALOG.map((device) => {
-      const on = ['laptop', 'monitor', 'lamp', 'fridge', 'phone'].includes(
-        device.id,
-      )
-      const level = device.id === 'lamp' ? 0.75 : 1
-      return [
-        device.id,
-        {
-          on,
-          level,
-          watts: on ? device.ratedWatts * level : device.standbyWatts,
-          energyWh: 0,
-        },
-      ]
-    }),
+    DEVICE_CATALOG.map((d) => [
+      d.id,
+      {
+        on: d.defaultOn,
+        level: 1,
+        watts: d.defaultOn ? d.ratedWatts : d.standbyWatts,
+        energyWh: 0,
+      },
+    ]),
   ) as Record<DeviceId, DeviceState>
 }
-
 interface PowerState {
   devices: Record<DeviceId, DeviceState>
-  selected: DeviceId | 'strip' | null
+  strips: Record<StationId, boolean>
+  selected: Selection
+  activeStation: StationId | null
+  cutaway: boolean
   history: PowerSample[]
   sessionSeconds: number
   masterOn: boolean
@@ -41,23 +40,31 @@ interface PowerState {
   autoRotate: boolean
   cameraView: CameraView
   cameraRevision: number
-  select: (id: DeviceId | 'strip' | null) => void
+  inspectionPart: InspectionPart
+  select: (id: Selection) => void
+  selectStation: (id: StationId) => void
+  closePanel: () => void
   toggle: (id: DeviceId) => void
   setLevel: (id: DeviceId, level: number) => void
   setMaster: (on: boolean) => void
+  setStrip: (id: StationId, on: boolean) => void
   setMode: (mode: SceneMode) => void
   setView: (view: CameraView) => void
   focus: () => void
+  inspect: (part: 'strip' | 'bed') => void
+  toggleCutaway: () => void
   toggleNight: () => void
   toggleFlow: () => void
   toggleLabels: () => void
   toggleRotate: () => void
   tick: (seconds: number, now: number) => void
 }
-
 export const usePowerStore = create<PowerState>()((set) => ({
   devices: initialDevices(),
+  strips: { s1: true, s2: true, s3: true, s4: true },
   selected: null,
+  activeStation: null,
+  cutaway: true,
   history: [],
   sessionSeconds: 0,
   masterOn: true,
@@ -68,7 +75,28 @@ export const usePowerStore = create<PowerState>()((set) => ({
   autoRotate: false,
   cameraView: 'overview',
   cameraRevision: 0,
-  select: (selected) => set({ selected, autoRotate: false }),
+  inspectionPart: 'station',
+  select: (selected) =>
+    set((state) => ({
+      selected,
+      activeStation:
+        selected && selected !== 'room'
+          ? selected.includes('-')
+            ? DEVICE_MAP[selected as DeviceId].stationId
+            : (selected as StationId)
+          : state.activeStation,
+      autoRotate: false,
+    })),
+  selectStation: (activeStation) =>
+    set((state) => ({
+      selected: activeStation,
+      activeStation,
+      cutaway: true,
+      autoRotate: false,
+      inspectionPart: 'station',
+      cameraRevision: state.cameraRevision + 1,
+    })),
+  closePanel: () => set({ selected: null }),
   toggle: (id) =>
     set((state) => ({
       devices: {
@@ -82,79 +110,91 @@ export const usePowerStore = create<PowerState>()((set) => ({
         ...state.devices,
         [id]: {
           ...state.devices[id],
-          level: Math.max(0.1, Math.min(1, level)),
+          level: Number.isFinite(level)
+            ? Math.max(0.1, Math.min(1, level))
+            : state.devices[id].level,
         },
       },
     })),
   setMaster: (masterOn) => set({ masterOn }),
+  setStrip: (id, on) =>
+    set((state) => ({ strips: { ...state.strips, [id]: on } })),
   setMode: (mode) =>
     set((state) => ({
       mode,
-      night: mode === 'relax',
       masterOn: true,
+      strips: { s1: true, s2: true, s3: true, s4: true },
+      night: mode === 'relax',
       devices: Object.fromEntries(
-        DEVICE_CATALOG.map(({ id }) => {
-          const on =
-            mode === 'away'
-              ? id === 'fridge'
-              : mode === 'relax'
-                ? ['lamp', 'phone', 'fridge', 'fan'].includes(id)
-                : ['laptop', 'monitor', 'lamp', 'phone', 'fridge'].includes(id)
-          return [
-            id,
-            {
-              ...state.devices[id],
-              on,
-              level:
-                id === 'lamp'
-                  ? mode === 'relax'
-                    ? 0.35
-                    : 0.75
-                  : id === 'fan'
-                    ? 0.5
-                    : 1,
-            },
-          ]
-        }),
+        DEVICE_CATALOG.map((d) => [
+          d.id,
+          {
+            ...state.devices[d.id],
+            on:
+              mode === 'away'
+                ? false
+                : mode === 'relax'
+                  ? ['lamp', 'speaker', 'fan', 'humidifier', 'phone'].includes(
+                      d.kind,
+                    )
+                  : d.defaultOn,
+            level: mode === 'relax' && d.kind === 'lamp' ? 0.4 : 1,
+          },
+        ]),
       ) as Record<DeviceId, DeviceState>,
     })),
   setView: (cameraView) =>
     set((state) => ({
       cameraView,
       selected: null,
+      activeStation: null,
+      inspectionPart: 'station',
       autoRotate: false,
       cameraRevision: state.cameraRevision + 1,
     })),
   focus: () =>
     set((state) => ({
       cameraRevision: state.cameraRevision + 1,
+      inspectionPart: 'device',
+      autoRotate: false,
+      cutaway: true,
+    })),
+  inspect: (inspectionPart) =>
+    set((state) => ({
+      inspectionPart,
+      cutaway: inspectionPart !== 'bed',
+      cameraRevision: state.cameraRevision + 1,
       autoRotate: false,
     })),
+  toggleCutaway: () => set((state) => ({ cutaway: !state.cutaway })),
   toggleNight: () => set((state) => ({ night: !state.night })),
   toggleFlow: () => set((state) => ({ energyFlow: !state.energyFlow })),
   toggleLabels: () => set((state) => ({ labels: !state.labels })),
   toggleRotate: () => set((state) => ({ autoRotate: !state.autoRotate })),
   tick: (seconds, now) =>
     set((state) => {
-      const dt = Math.min(Math.max(seconds, 0), 5)
+      const dt = Math.min(
+        Math.max(Number.isFinite(seconds) ? seconds : 0, 0),
+        5,
+      )
       const elapsed = state.sessionSeconds + dt
       const devices = { ...state.devices }
-      const sample = {} as Record<DeviceId, number>
+      const readings = {} as Record<DeviceId, number>
+      const stations = Object.fromEntries(
+        STATIONS.map((s) => [s.id, 0]),
+      ) as Record<StationId, number>
       let total = 0
       DEVICE_CATALOG.forEach((spec, index) => {
         const device = state.devices[spec.id]
+        const powered = state.masterOn && state.strips[spec.stationId]
         const wave = 0.97 + 0.03 * Math.sin(elapsed * 0.7 + index * 2)
-        const cycle =
-          spec.id === 'fridge'
-            ? 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(elapsed * 0.08))
-            : 1
-        const target = !state.masterOn
+        const target = !powered
           ? 0
           : device.on
-            ? spec.ratedWatts * device.level * wave * cycle
+            ? spec.ratedWatts * device.level * wave
             : spec.standbyWatts
         const watts =
-          !state.masterOn || !device.on
+          !powered || !device.on
             ? target
             : device.watts + (target - device.watts) * (1 - Math.exp(-dt * 2.5))
         devices[spec.id] = {
@@ -163,7 +203,8 @@ export const usePowerStore = create<PowerState>()((set) => ({
           energyWh:
             device.energyWh + (((device.watts + watts) / 2) * dt) / 3600,
         }
-        sample[spec.id] = watts
+        readings[spec.id] = watts
+        stations[spec.stationId] += watts
         total += watts
       })
       return {
@@ -171,7 +212,7 @@ export const usePowerStore = create<PowerState>()((set) => ({
         sessionSeconds: elapsed,
         history: [
           ...state.history,
-          { time: now, total, devices: sample },
+          { time: now, total, devices: readings, stations },
         ].slice(-90),
       }
     }),

@@ -1,20 +1,26 @@
 import { useId, useState } from 'react'
-import type { DeviceId, PowerSample } from '../types'
+import type { DeviceId, PowerSample, StationId } from '../types'
 
 export function PowerChart({
   history,
   device,
+  station,
   compact = false,
 }: {
   history: PowerSample[]
   device?: DeviceId
+  station?: StationId
   compact?: boolean
 }) {
   const gradientId = useId().replace(/:/g, '')
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const samples = history.slice(-60)
   const values = samples.map((sample) =>
-    device ? sample.devices[device] : sample.total,
+    device
+      ? sample.devices[device]
+      : station
+        ? sample.stations[station]
+        : sample.total,
   )
   const max = Math.max(10, ...values) * 1.2
   const width = 300
@@ -54,7 +60,13 @@ export function PowerChart({
         viewBox={`0 0 ${width} ${height}`}
         preserveAspectRatio="none"
         role="img"
-        aria-label={device ? '设备模拟功率趋势' : '总模拟功率趋势'}
+        aria-label={
+          device
+            ? '设备模拟功率趋势'
+            : station
+              ? '床位模拟功率趋势'
+              : '总模拟功率趋势'
+        }
         onMouseLeave={() => setHoverIndex(null)}
         onMouseMove={(event) => {
           const rect = event.currentTarget.getBoundingClientRect()
