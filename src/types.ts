@@ -1,27 +1,40 @@
-export type ApplianceKind =
+export type DeviceId =
   | 'laptop'
   | 'monitor'
-  | 'kettle'
   | 'lamp'
-  | 'fridge'
+  | 'fan'
   | 'phone'
+  | 'kettle'
+  | 'fridge'
+  | 'ac'
+export type Point3 = [number, number, number]
+export type SceneMode = 'study' | 'relax' | 'away'
+export type CameraView = 'overview' | 'desk' | 'living' | 'top'
 
-export interface ApplianceSpec {
-  kind: ApplianceKind
-  label: string
-  /** rated power draw in watts while running */
+export interface DeviceSpec {
+  id: DeviceId
+  name: string
+  english: string
+  category: string
+  description: string
   ratedWatts: number
-  /** idle draw in watts while plugged in but switched off */
   standbyWatts: number
-  /** base colour used by the 3D model */
   color: string
+  position: Point3
+  target: Point3
+  camera: Point3
+  labelOffset: Point3
 }
 
-export interface Outlet {
-  id: number
-  label: string
-  /** appliance currently plugged into this socket, null when free */
-  appliance: ApplianceSpec | null
-  /** whether the plugged appliance is switched on */
+export interface DeviceState {
   on: boolean
+  level: number
+  watts: number
+  energyWh: number
+}
+
+export interface PowerSample {
+  time: number
+  total: number
+  devices: Record<DeviceId, number>
 }
