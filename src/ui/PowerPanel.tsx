@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -22,7 +21,7 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Alert, AlertTitle } from '@/components/ui/alert'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
 import { formatEnergy, loadLevel } from '@/lib/format'
@@ -74,7 +73,7 @@ export function PowerPanel() {
       ? '灯光亮度'
       : spec?.kind === 'fan'
         ? '风扇转速'
-        : '模拟负载'
+        : '负载'
   const level = loadLevel(watts, limit)
   const energyText = formatEnergy(energy)
   return (
@@ -91,7 +90,7 @@ export function PowerPanel() {
         className={cn(
           'gap-0',
           isMobile
-            ? 'bottom-26 h-1/2 rounded-t-2xl'
+            ? 'h-1/2 rounded-t-2xl'
             : 'w-96 sm:max-w-96',
         )}
         onInteractOutside={(event) => event.preventDefault()}
@@ -102,9 +101,7 @@ export function PowerPanel() {
             {spec?.name ??
               (station ? `${station.name} · 独立插排` : '全寝能源概览')}
           </SheetTitle>
-          <SheetDescription>
-            {spec?.english ?? station?.theme ?? 'ROOM 302 · 四路独立供电'}
-          </SheetDescription>
+          <SheetDescription className="sr-only">功率与电源控制</SheetDescription>
         </SheetHeader>
         <SheetClose asChild>
           <Button
@@ -129,7 +126,6 @@ export function PowerPanel() {
                       ? '设备待机'
                       : '正在供电'}
               </Badge>
-              <Badge variant="outline">模拟数据</Badge>
               {spec && (
                 <Badge variant="secondary">
                   {station?.name} · 插孔 {spec.socket + 1}
@@ -143,21 +139,21 @@ export function PowerPanel() {
                 onClick={state.focus}
               >
                 <Focus />
-                近距离检查模型
+                查看设备
               </Button>
             )}
             <Card>
               <CardHeader>
-                <CardDescription>
+                <CardTitle className="text-sm">
                   {spec
                     ? '当前设备功率'
                     : station
                       ? '本床位总功率'
                       : '全寝总功率'}
-                </CardDescription>
+                </CardTitle>
                 <CardTitle className="text-4xl tabular-nums">
                   {watts.toFixed(1)}{' '}
-                  <span className="text-sm font-normal text-muted-foreground">
+                  <span className="text-sm font-normal">
                     W
                   </span>
                 </CardTitle>
@@ -174,27 +170,6 @@ export function PowerPanel() {
                       '[&_[data-slot=progress-indicator]]:bg-destructive',
                   )}
                 />
-                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span>
-                    {spec ? '示例额定功率' : '演示负载阈值'} {limit} W
-                  </span>
-                  <span
-                    className={cn(
-                      'tabular-nums',
-                      level === 'near' && 'text-warning',
-                      level === 'over' && 'text-destructive',
-                    )}
-                  >
-                    {((watts / limit) * 100).toFixed(1)}%
-                  </span>
-                </div>
-                {level !== 'calm' && (
-                  <CardDescription>
-                    {level === 'over'
-                      ? '已超过演示阈值，不模拟真实断路保护。'
-                      : '已接近演示阈值。'}
-                  </CardDescription>
-                )}
               </CardContent>
             </Card>
             <Card>
@@ -208,11 +183,6 @@ export function PowerPanel() {
                           ? '此床位插排总开关'
                           : '全寝总电源'}
                     </Label>
-                    <CardDescription>
-                      {station
-                        ? '不改变其他床位的电源状态'
-                        : '控制所有床位上游电源'}
-                    </CardDescription>
                   </div>
                   <Switch
                     id="power-switch"
@@ -259,7 +229,6 @@ export function PowerPanel() {
             <Card>
               <CardHeader>
                 <CardTitle>功率轨迹</CardTitle>
-                <CardDescription>最近 60 秒 · 每秒采样</CardDescription>
               </CardHeader>
               <CardContent>
                 <PowerChart
@@ -272,20 +241,18 @@ export function PowerPanel() {
             <div className="grid grid-cols-2 gap-4">
               <Card className="gap-3">
                 <CardHeader className="px-4">
-                  <CardDescription>本次模拟耗电</CardDescription>
+                  <CardTitle className="text-sm">累计用电</CardTitle>
                   <CardTitle className="text-lg tabular-nums">
-                    {energyText.value}
+                    {energyText.value} {energyText.unit}
                   </CardTitle>
-                  <CardDescription>{energyText.unit}</CardDescription>
                 </CardHeader>
               </Card>
               <Card className="gap-3">
                 <CardHeader className="px-4">
-                  <CardDescription>估算电流 · {VOLTAGE}V</CardDescription>
+                  <CardTitle className="text-sm">电流</CardTitle>
                   <CardTitle className="text-lg tabular-nums">
-                    {(watts / VOLTAGE).toFixed(2)}
+                    {(watts / VOLTAGE).toFixed(2)} A
                   </CardTitle>
-                  <CardDescription>A</CardDescription>
                 </CardHeader>
               </Card>
             </div>
@@ -293,7 +260,6 @@ export function PowerPanel() {
               <Card>
                 <CardHeader>
                   <CardTitle>四孔插排</CardTitle>
-                  <CardDescription>每孔一件设备，点击查看详情</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {devices.map((d) => (
@@ -319,7 +285,6 @@ export function PowerPanel() {
               <Card>
                 <CardHeader>
                   <CardTitle>四个独立床位</CardTitle>
-                  <CardDescription>选择一个床位查看独立插排</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {STATIONS.map((s) => (
@@ -345,7 +310,6 @@ export function PowerPanel() {
             )}
             {spec && (
               <>
-                <CardDescription>{spec.description}</CardDescription>
                 <Button
                   variant="ghost"
                   className="w-full justify-start"
@@ -390,10 +354,7 @@ export function PowerPanel() {
             {watts > limit && (
               <Alert variant="destructive">
                 <Info />
-                <AlertTitle>超过演示阈值</AlertTitle>
-                <AlertDescription>
-                  仅作提示，不模拟真实断路保护。
-                </AlertDescription>
+                <AlertTitle>负载偏高</AlertTitle>
               </Alert>
             )}
             {station && (
@@ -406,9 +367,6 @@ export function PowerPanel() {
                 <ArrowRight />
               </Button>
             )}
-            <CardDescription>
-              功率与耗电均为模拟值，各床位独立控制，仅用于空间交互演示。
-            </CardDescription>
           </div>
         </ScrollArea>
       </SheetContent>

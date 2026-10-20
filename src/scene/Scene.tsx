@@ -143,11 +143,6 @@ function CameraRig() {
 function Projection() {
   const anchors = useRef([
     ...STATIONS.map((s) => ({
-      id: `station-${s.id}`,
-      point: new Vector3(...toWorld(s, [-0.25, 2.69, 0.15])),
-      element: null as HTMLElement | null,
-    })),
-    ...STATIONS.map((s) => ({
       id: `strip-${s.id}`,
       point: new Vector3(...toWorld(s, [STRIP_LOCAL[0], 1.03, STRIP_LOCAL[2]])),
       element: null as HTMLElement | null,

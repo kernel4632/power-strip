@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { CanvasTexture, SRGBColorSpace } from 'three'
 import type { Group, Mesh, MeshStandardMaterial } from 'three'
 import { STATIONS, DESK_TOP } from '../data/catalog'
 import { usePowerStore } from '../store/usePowerStore'
@@ -15,45 +14,6 @@ const PAPER = '#f2eada'
 const CABINET_SHELL = '#31383f'
 const CABINET_DOOR = '#4b82b8'
 const CABINET_INNER = '#b4a992'
-const labels = new Map<string, CanvasTexture>()
-function labelTexture(text: string, color: string) {
-  const key = text + color
-  if (labels.has(key)) return labels.get(key)!
-  const canvas = document.createElement('canvas')
-  canvas.width = 512
-  canvas.height = 160
-  const context = canvas.getContext('2d')!
-  context.fillStyle = '#f1eee2'
-  context.fillRect(0, 0, 512, 160)
-  context.fillStyle = color
-  context.fillRect(0, 0, 12, 160)
-  context.font = '600 56px sans-serif'
-  context.fillText(text, 35, 72)
-  context.font = '20px monospace'
-  context.fillText('ROOM 302 / PERSONAL SPACE', 36, 118)
-  const texture = new CanvasTexture(canvas)
-  texture.colorSpace = SRGBColorSpace
-  labels.set(key, texture)
-  return texture
-}
-function Plaque({
-  text,
-  color,
-  position,
-  size = [0.42, 0.13],
-}: {
-  text: string
-  color: string
-  position: Point3
-  size?: [number, number]
-}) {
-  return (
-    <mesh position={position}>
-      <planeGeometry args={size} />
-      <meshStandardMaterial map={labelTexture(text, color)} roughness={0.7} />
-    </mesh>
-  )
-}
 function Screw({ position }: { position: Point3 }) {
   return (
     <group position={position}>
@@ -336,17 +296,6 @@ function DeskStructure({ station }: { station: StationSpec }) {
             color="#6a7365"
           />
         ))}
-        <Box
-          size={[0.56, 0.19, 0.025]}
-          position={[-0.3, 1.48, -0.4995]}
-          color="#c3b18f"
-        />
-        <Plaque
-          text={`${station.number} / ${station.theme}`}
-          color={station.color}
-          position={[-0.3, 1.48, -0.4865]}
-          size={[0.51, 0.16]}
-        />
         <Box
           size={[1.01, 0.028, 0.2]}
           position={[-0.45, 1.7, -0.39]}
@@ -693,18 +642,6 @@ function Loft({ station }: { station: StationSpec }) {
             color={STEEL}
           />
         ))}
-        <Box
-          size={[0.4, 0.11, 0.018]}
-          position={[-0.43, 2.34, 0.55]}
-          color="#e7e4d5"
-          round={0.006}
-        />
-        <Plaque
-          text={`BED ${station.number}`}
-          color={station.color}
-          position={[-0.43, 2.34, 0.561]}
-          size={[0.36, 0.105]}
-        />
         <Box
           size={[0.25, 0.14, 0.08]}
           position={[0.84, 2.29, -0.49]}

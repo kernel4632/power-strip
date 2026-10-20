@@ -12,29 +12,6 @@ export function Hotspots() {
       {STATIONS.map((s) => (
         <div
           className="absolute left-0 top-0"
-          id={`anchor-station-${s.id}`}
-          key={s.id}
-        >
-          <Button
-            hidden={!!state.activeStation || !state.labels}
-            variant="outline"
-            className="pointer-events-auto h-auto gap-2 py-2"
-            onClick={() => state.selectStation(s.id)}
-            aria-label={`进入${s.name}`}
-          >
-            <Badge variant="secondary">{s.number}</Badge>
-            <span className="hidden text-left text-xs md:block">
-              {s.name}
-              <span className="hidden text-xs font-normal text-muted-foreground md:block">
-                {s.theme}
-              </span>
-            </span>
-          </Button>
-        </div>
-      ))}
-      {STATIONS.map((s) => (
-        <div
-          className="absolute left-0 top-0"
           id={`anchor-strip-${s.id}`}
           key={`strip-${s.id}`}
         >

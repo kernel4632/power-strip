@@ -2,9 +2,6 @@ import { Component, Suspense, lazy, useEffect, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import {
   Home,
-  Sun,
-  Moon,
-  Leaf,
   SunMoon,
   ChartNoAxesCombined,
   Focus,
@@ -12,12 +9,10 @@ import {
   Eye,
   Layers,
   Info,
-  Mouse,
   ChevronDown,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardContent,
@@ -25,7 +20,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Toggle } from '@/components/ui/toggle'
 import {
   Tooltip,
@@ -53,16 +47,14 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import {
   CAMERA_VIEWS,
   DEVICE_CATALOG,
-  SCENE_MODES,
   STATIONS,
   STATION_MAP,
-  stationDevices,
 } from './data/catalog'
 import { usePowerStore } from './store/usePowerStore'
 import { PowerChart } from './ui/PowerChart'
 import { PowerPanel } from './ui/PowerPanel'
 import { Hotspots } from './ui/Hotspots'
-import type { CameraView, SceneMode, StationId } from './types'
+import type { CameraView } from './types'
 
 const Scene = lazy(() =>
   import('./scene/Scene').then((m) => ({ default: m.Scene })),
@@ -112,10 +104,6 @@ export default function App() {
     0,
   )
   const energyText = formatEnergy(energy)
-  const activeCount = DEVICE_CATALOG.filter(
-    (d) =>
-      state.masterOn && state.strips[d.stationId] && state.devices[d.id].on,
-  ).length
   const active = state.activeStation ? STATION_MAP[state.activeStation] : null
   const panelOpen = state.selected !== null
   useEffect(() => {
@@ -176,8 +164,7 @@ export default function App() {
                 <div className="grid h-full place-items-center p-4">
                   <Card className="w-72">
                     <CardHeader>
-                      <CardTitle>正在准备你的宿舍</CardTitle>
-                      <CardDescription>ROOM 302 · DORM LAB</CardDescription>
+                      <CardTitle>加载中</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <Skeleton className="h-32 w-full" />
@@ -205,37 +192,8 @@ export default function App() {
             onClick={() => state.setView('overview')}
           >
             <Home />
-            <span className="text-left">
-              DORM LAB
-              <span className="hidden text-xs font-normal text-muted-foreground sm:block">
-                302 · 四人寝用电实验室
-              </span>
-            </span>
+            DORM LAB
           </Button>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            className="pointer-events-auto order-last mx-auto bg-background md:order-none md:mx-0"
-            value={state.mode}
-            onValueChange={(value) => {
-              if (value) state.setMode(value as SceneMode)
-            }}
-            aria-label="生活模式"
-          >
-            {SCENE_MODES.map((mode, i) => {
-              const ModeIcon = [Sun, Moon, Leaf][i]
-              return (
-                <ToggleGroupItem
-                  key={mode.id}
-                  value={mode.id}
-                  aria-label={mode.label}
-                >
-                  <ModeIcon />
-                  <span className="hidden lg:inline">{mode.label}</span>
-                </ToggleGroupItem>
-              )
-            })}
-          </ToggleGroup>
           <div className="pointer-events-auto flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -262,34 +220,6 @@ export default function App() {
             </Button>
           </div>
         </header>
-        <Card
-          className={cn(
-            'pointer-events-none absolute left-4 top-24 z-20 hidden w-72 gap-3 md:flex',
-            panelOpen && 'md:hidden',
-          )}
-        >
-          <CardHeader className="gap-2">
-            <CardDescription>
-              {active ? `BED ${active.number}` : 'ROOM 302'}
-            </CardDescription>
-            <CardTitle>
-              {active ? active.theme : '四个位置，一起生活。'}
-            </CardTitle>
-            <CardDescription>
-              {active
-                ? `${active.name} · 独立四孔插排`
-                : '选择床位，看看每一瓦流向哪里。'}
-            </CardDescription>
-          </CardHeader>
-          {active && state.cutaway && (
-            <CardContent>
-              <Badge variant="secondary">
-                <Layers />
-                上铺透明检查
-              </Badge>
-            </CardContent>
-          )}
-        </Card>
         <Collapsible
           open={expandedEnergy}
           onOpenChange={setExpandedEnergy}
@@ -297,25 +227,19 @@ export default function App() {
         >
           <Card
             className={cn(
-              'absolute bottom-32 left-4 z-20 w-44 gap-3 py-4 md:bottom-4 md:w-56',
+              'absolute bottom-4 left-4 z-20 w-44 gap-3 py-4 md:bottom-4 md:w-56',
               panelOpen && 'hidden',
             )}
             aria-label="全寝功率概览"
           >
             <CardHeader className="gap-2 px-4">
-              <div className="flex items-center justify-between gap-2">
-                <CardDescription>全寝实时功率</CardDescription>
-                <Badge variant="outline">模拟</Badge>
-              </div>
+              <CardTitle className="text-sm">全寝功率</CardTitle>
               <CardTitle className="text-3xl tabular-nums">
                 {total.toFixed(0)}{' '}
-                <span className="text-sm font-normal text-muted-foreground">
+                <span className="text-sm font-normal">
                   W
                 </span>
               </CardTitle>
-              <CardDescription>
-                {activeCount} / {DEVICE_CATALOG.length} 件设备运行
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 px-4">
               <CollapsibleTrigger asChild>
@@ -466,7 +390,7 @@ export default function App() {
                   <Eye />
                 </Toggle>
               </TooltipTrigger>
-              <TooltipContent>床位与设备标记</TooltipContent>
+              <TooltipContent>设备标记</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -534,72 +458,13 @@ export default function App() {
                     <span>能流 / 透视 / 昼夜</span>
                   </div>
                   <CardDescription>
-                    拖动旋转，滚轮缩放。数据均为模拟值。
+                    拖动旋转，滚轮缩放。
                   </CardDescription>
                 </div>
               </PopoverContent>
             </Popover>
           </nav>
         </Card>
-        <div
-          className={cn(
-            'pointer-events-none absolute inset-x-4 bottom-4 z-30 flex flex-col items-center gap-2',
-            panelOpen && 'md:right-100',
-          )}
-        >
-          <Card className="pointer-events-auto w-full max-w-full gap-2 p-2 lg:w-auto">
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              spacing={1}
-              className="w-full"
-              value={active?.id ?? 'room'}
-              onValueChange={(value) => {
-                if (value === 'room') state.setView('overview')
-                else if (value) state.selectStation(value as StationId)
-              }}
-              aria-label="选择四个独立床位"
-            >
-              <ToggleGroupItem
-                value="room"
-                className="h-auto min-w-0 flex-1 flex-col gap-1 px-1 py-2 lg:flex-none lg:px-4"
-                aria-label="返回四人寝全景"
-              >
-                <Home />
-                <span className="text-xs">全寝</span>
-              </ToggleGroupItem>
-              {STATIONS.map((station) => {
-                const watts = stationDevices(station.id).reduce(
-                  (sum, d) => sum + state.devices[d.id].watts,
-                  0,
-                )
-                const powered = state.masterOn && state.strips[station.id]
-                return (
-                  <ToggleGroupItem
-                    key={station.id}
-                    value={station.id}
-                    className="h-auto min-w-0 flex-1 flex-col gap-1 px-1 py-2 lg:flex-none lg:px-4"
-                    aria-label={`进入${station.name}`}
-                  >
-                    <span className="max-w-full truncate">
-                      {station.number}
-                      <span className="ml-2 hidden lg:inline">
-                        {station.theme}
-                      </span>
-                    </span>
-                    <span className="max-w-full truncate text-xs font-normal text-muted-foreground tabular-nums">
-                      {powered ? `${watts.toFixed(0)} W` : '已断电'}
-                    </span>
-                  </ToggleGroupItem>
-                )
-              })}
-            </ToggleGroup>
-          </Card>
-          <Badge variant="secondary" className="hidden gap-2 md:inline-flex">
-            <Mouse />
-            拖动旋转 · 滚轮缩放 · 点击设备探索
-          </Badge>
-        </div>
         <PowerPanel />
       </main>
     </TooltipProvider>
