@@ -1,73 +1,75 @@
+import { Zap } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { DEVICE_CATALOG, STATIONS } from '../data/catalog'
 import { usePowerStore } from '../store/usePowerStore'
+
 export function Hotspots() {
   const state = usePowerStore()
+  // Only these anchors receive pixel transforms from the 3D projection; their UI uses theme tokens.
   return (
-    <div className="hotspot-layer">
+    <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
       {STATIONS.map((s) => (
         <div
-          className="hotspot-anchor"
+          className="absolute left-0 top-0"
           id={`anchor-station-${s.id}`}
           key={s.id}
         >
-          <button
+          <Button
             hidden={!!state.activeStation || !state.labels}
-            className="hotspot station-hotspot"
+            variant="outline"
+            className="pointer-events-auto h-auto gap-2 py-2"
             onClick={() => state.selectStation(s.id)}
             aria-label={`进入${s.name}`}
           >
-            <span
-              className="station-hotspot__number"
-              style={{ background: s.color }}
-            >
-              {s.number}
+            <Badge variant="secondary">{s.number}</Badge>
+            <span className="hidden text-left text-xs md:block">
+              {s.name}
+              <span className="hidden text-xs font-normal text-muted-foreground md:block">
+                {s.theme}
+              </span>
             </span>
-            <span>
-              <strong>{s.name}</strong>
-              <small>{s.theme} · 独立插排</small>
-            </span>
-          </button>
+          </Button>
         </div>
       ))}
       {STATIONS.map((s) => (
         <div
-          className="hotspot-anchor"
+          className="absolute left-0 top-0"
           id={`anchor-strip-${s.id}`}
           key={`strip-${s.id}`}
         >
-          <button
+          <Button
             hidden={state.activeStation !== s.id || !state.labels}
-            className="hotspot hotspot--strip"
+            size="sm"
+            className="pointer-events-auto"
             onClick={() => state.select(s.id)}
             aria-label={`查看${s.name}插排`}
           >
-            <span className="hotspot__dot" />
-            <span className="hotspot__text">{s.number} 独立插排</span>
-          </button>
+            <Zap />
+            {s.number} 独立插排
+          </Button>
         </div>
       ))}
       {DEVICE_CATALOG.map((d) => (
-        <div className="hotspot-anchor" id={`anchor-${d.id}`} key={d.id}>
-          <button
+        <div className="absolute left-0 top-0" id={`anchor-${d.id}`} key={d.id}>
+          <Button
             hidden={
               state.activeStation !== d.stationId ||
               !state.labels ||
               state.inspectionPart === 'bed' ||
               state.inspectionPart === 'strip'
             }
-            className={`hotspot ${state.selected === d.id ? 'hotspot--selected hotspot--expanded' : ''}`}
+            variant={state.selected === d.id ? 'secondary' : 'outline'}
+            size="sm"
+            className="pointer-events-auto gap-2 text-xs"
             onClick={() => state.select(d.id)}
             aria-label={`查看${STATIONS.find((s) => s.id === d.stationId)!.name}${d.name}`}
           >
-            <span className="hotspot__dot" />
-            <span className="hotspot__text">
-              {d.name}
-              <b>
-                {state.devices[d.id].watts.toFixed(0)}
-                <small> W</small>
-              </b>
-            </span>
-          </button>
+            {d.name}
+            <Badge variant="secondary" className="tabular-nums">
+              {state.devices[d.id].watts.toFixed(0)} W
+            </Badge>
+          </Button>
         </div>
       ))}
     </div>

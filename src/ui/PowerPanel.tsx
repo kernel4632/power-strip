@@ -1,4 +1,30 @@
-import { useEffect, useRef } from 'react'
+import { Focus, Zap, Layers, ArrowRight, X, Info } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetClose,
+} from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
+import { Slider } from '@/components/ui/slider'
+import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
+import { Separator } from '@/components/ui/separator'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { cn } from '@/lib/utils'
 import {
   CIRCUIT_LIMIT,
   DEVICE_CATALOG,
@@ -10,14 +36,11 @@ import {
 } from '../data/catalog'
 import { usePowerStore } from '../store/usePowerStore'
 import type { DeviceId, StationId } from '../types'
-import { Icon } from './Icon'
 import { PowerChart } from './PowerChart'
-import { Button } from './Button'
 
 export function PowerPanel() {
-  const state = usePowerStore(),
-    panel = useRef<HTMLElement>(null),
-    close = useRef<HTMLButtonElement>(null)
+  const state = usePowerStore()
+  const isMobile = useIsMobile()
   const open = state.selected !== null
   const spec = state.selected?.includes('-')
     ? DEVICE_MAP[state.selected as DeviceId]
@@ -40,304 +63,334 @@ export function PowerPanel() {
     state.masterOn &&
     (station ? state.strips[station.id] : true) &&
     (device ? device.on : true)
-  useEffect(() => {
-    panel.current?.scrollTo({ top: 0 })
-  }, [state.selected])
-  useEffect(() => {
-    if (!open) return
-    const previous = document.activeElement as HTMLElement | null
-    close.current?.focus({ preventScroll: true })
-    return () => {
-      if (previous?.isConnected) previous.focus({ preventScroll: true })
-    }
-  }, [open])
+  const powerLabel = spec
+    ? `${spec.name}电源`
+    : station
+      ? `${station.name}插排电源`
+      : '全寝总电源'
+  const levelLabel =
+    spec?.kind === 'lamp'
+      ? '灯光亮度'
+      : spec?.kind === 'fan'
+        ? '风扇转速'
+        : '模拟负载'
   return (
-    <aside
-      ref={panel}
-      className={`detail-panel ${open ? 'detail-panel--open' : ''}`}
-      inert={!open}
-      aria-hidden={!open}
-      aria-label="床位与设备详情"
+    <Sheet
+      open={open}
+      onOpenChange={(value) => {
+        if (!value) state.closePanel()
+      }}
+      modal={false}
     >
-      <div className="detail-panel__top">
-        <span className="eyebrow">
-          {station
-            ? `BED ${station.number} / ${spec ? 'DEVICE' : 'POWER STRIP'}`
-            : 'ROOM 302 / ENERGY'}
-        </span>
-        <Button
-          ref={close}
-          variant="ghost"
-          size="icon"
-          className="icon-button"
-          onClick={state.closePanel}
-          aria-label="关闭详情面板"
-        >
-          <Icon name="close" />
-        </Button>
-      </div>
-      <div className="detail-heading">
-        <div className="device-glyph" style={{ color: station?.color }}>
-          {station && !spec ? (
-            <b>{station.number}</b>
-          ) : (
-            <Icon name="bolt" size={28} />
-          )}
-        </div>
-        <div>
-          <h2>
+      <SheetContent
+        side={isMobile ? 'bottom' : 'right'}
+        showCloseButton={false}
+        className={cn(
+          'gap-0',
+          isMobile ? 'bottom-24 h-1/2' : 'w-96 sm:max-w-96',
+        )}
+        onInteractOutside={(event) => event.preventDefault()}
+        aria-label="床位与设备详情"
+      >
+        <SheetHeader className="shrink-0 pr-16">
+          <SheetTitle>
             {spec?.name ??
               (station ? `${station.name} · 独立插排` : '全寝能源概览')}
-          </h2>
-          <p>
-            {spec?.english ?? station?.theme ?? 'FOUR PLACES. ONE SHARED ROOM.'}
-          </p>
-        </div>
-      </div>
-      <div className="detail-status">
-        <i className={active ? 'status-dot' : 'status-dot status-dot--off'} />
-        {!state.masterOn
-          ? '全寝总电源已关'
-          : station && !state.strips[station.id]
-            ? '本床位插排已关闭'
-            : device && !device.on
-              ? '设备待机'
-              : '正在供电'}
-        <span className="simulation-tag">模拟数据</span>
-      </div>
-      {spec && (
-        <p className="socket-assignment">
-          {station?.name} / 插孔 {spec.socket + 1} / 仅此床位回路
-        </p>
-      )}
-      {spec && (
-        <Button className="focus-button" onClick={state.focus}>
-          <Icon name="focus" size={17} />
-          近距离检查模型<span>DETAIL VIEW</span>
-        </Button>
-      )}
-      <section className="detail-power">
-        <span className="field-label">
-          {spec ? '当前设备功率' : station ? '本床位总功率' : '全寝总功率'}
-        </span>
-        <div className="detail-power__value">
-          {watts.toFixed(1)}
-          <span>W</span>
-        </div>
-        <div className="thin-meter">
-          <span
-            style={{
-              width: `${Math.min(100, (watts / limit) * 100)}%`,
-              background: station?.color,
-            }}
-          />
-        </div>
-        <div className="meter-caption">
-          <span>
-            {spec ? '示例额定功率' : '演示负载阈值'} {limit} W
-          </span>
-          <b>{((watts / limit) * 100).toFixed(1)}%</b>
-        </div>
-      </section>
-      <div className="power-switch-row">
-        <div>
-          <strong>
-            {spec ? '设备电源' : station ? '此床位插排总开关' : '全寝总电源'}
-          </strong>
-          <p>
-            {station ? '不改变其他三个床位的电源状态' : '控制所有床位上游电源'}
-          </p>
-        </div>
-        <button
-          role="switch"
-          aria-label={
-            spec
-              ? `${spec.name}电源`
-              : station
-                ? `${station.name}插排电源`
-                : '全寝总电源'
-          }
-          aria-checked={active}
-          className={`toggle-switch ${active ? 'toggle-switch--on' : ''}`}
-          disabled={
-            (!!spec && (!state.masterOn || !state.strips[spec.stationId])) ||
-            (!!station && !state.masterOn)
-          }
-          onClick={() =>
-            spec
-              ? state.toggle(spec.id)
-              : station
-                ? state.setStrip(station.id, !state.strips[station.id])
-                : state.setMaster(!state.masterOn)
-          }
-        >
-          <span />
-        </button>
-      </div>
-      {spec && device && (
-        <div className="level-control">
-          <label htmlFor="device-level">
-            {spec.kind === 'lamp'
-              ? '灯光亮度'
-              : spec.kind === 'fan'
-                ? '风扇转速'
-                : '模拟负载'}
-            <b>{Math.round(device.level * 100)}%</b>
-          </label>
-          <input
-            id="device-level"
-            type="range"
-            min="10"
-            max="100"
-            step="5"
-            value={Math.round(device.level * 100)}
-            onChange={(e) =>
-              state.setLevel(spec.id, Number(e.target.value) / 100)
-            }
-            disabled={!active}
-          />
-        </div>
-      )}
-      <section className="detail-section">
-        <div className="section-heading">
-          <h3>功率轨迹</h3>
-          <span>LIVE · 1 Hz</span>
-        </div>
-        <PowerChart
-          history={state.history}
-          device={spec?.id}
-          station={station?.id}
-        />
-      </section>
-      <div className="detail-metrics">
-        <div>
-          <span>本次模拟耗电</span>
-          <strong>
-            {(energy / 1000).toFixed(4)}
-            <small> kWh</small>
-          </strong>
-        </div>
-        <div>
-          <span>简化估算电流 · {VOLTAGE}V</span>
-          <strong>
-            {(watts / VOLTAGE).toFixed(2)}
-            <small> A</small>
-          </strong>
-        </div>
-      </div>
-      {!spec && station && (
-        <section className="detail-section">
-          <div className="section-heading">
-            <h3>四孔插排 · 连接明细</h3>
-            <span>1 DEVICE / SOCKET</span>
-          </div>
-          <div className="device-breakdown">
-            {devices.map((d) => (
-              <button key={d.id} onClick={() => state.select(d.id)}>
-                <span className="socket-number">{d.socket + 1}</span>
-                <span>{d.name}</span>
-                <span className="device-breakdown__track">
-                  <i
-                    style={{
-                      width: `${watts ? (state.devices[d.id].watts / watts) * 100 : 0}%`,
-                      background: station.color,
-                    }}
-                  />
-                </span>
-                <b>{state.devices[d.id].watts.toFixed(1)} W</b>
-                <Icon name="arrow" size={13} />
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-      {!station && (
-        <section className="detail-section">
-          <div className="section-heading">
-            <h3>四个独立床位</h3>
-            <span>4 SEPARATE STRIPS</span>
-          </div>
-          <div className="station-breakdown">
-            {STATIONS.map((s) => {
-              const sum = stationDevices(s.id).reduce(
-                (n, d) => n + state.devices[d.id].watts,
-                0,
-              )
-              return (
-                <button key={s.id} onClick={() => state.selectStation(s.id)}>
-                  <i style={{ background: s.color }}>{s.number}</i>
-                  <span>
-                    {s.name}
-                    <small>{s.theme}</small>
-                  </span>
-                  <b>{sum.toFixed(1)} W</b>
-                  <Icon name="arrow" size={14} />
-                </button>
-              )
-            })}
-          </div>
-        </section>
-      )}
-      {spec && (
-        <>
-          <p className="device-description">{spec.description}</p>
+          </SheetTitle>
+          <SheetDescription>
+            {spec?.english ?? station?.theme ?? 'ROOM 302 · 四路独立供电'}
+          </SheetDescription>
+        </SheetHeader>
+        <SheetClose asChild>
           <Button
             variant="ghost"
-            className="back-overview"
-            onClick={() => state.select(spec.stationId)}
+            size="icon"
+            className="absolute right-4 top-4"
+            aria-label="关闭详情面板"
           >
-            返回本床位插排 <Icon name="arrow" size={14} />
+            <X />
           </Button>
-        </>
-      )}
-      {station && !spec && (
-        <div className="inspection-buttons">
-          <Button
-            className="focus-button"
-            onClick={() => state.selectStation(station.id)}
-          >
-            <Icon name="focus" size={17} />
-            查看完整床位<span>STATION</span>
-          </Button>
-          <Button
-            className="focus-button"
-            onClick={() => {
-              state.inspect('strip')
-              state.closePanel()
-            }}
-          >
-            <Icon name="bolt" size={17} />
-            近看插头与走线<span>WIRING</span>
-          </Button>
-          <Button
-            className="focus-button"
-            onClick={() => {
-              state.inspect('bed')
-              state.closePanel()
-            }}
-          >
-            <Icon name="layers" size={17} />
-            近看上铺与护栏<span>LOFT BED</span>
-          </Button>
-        </div>
-      )}
-      {watts > limit && (
-        <div className="overload-note">
-          当前负载超过演示阈值，仅作提示，不模拟真实断路保护。
-        </div>
-      )}
-      {station && (
-        <Button
-          variant="ghost"
-          className="back-overview"
-          onClick={() => state.select('room')}
-        >
-          查看全寝总用电 <Icon name="arrow" size={14} />
-        </Button>
-      )}
-      <p className="panel-disclaimer">
-        全部功耗均为模拟值。四个插排各自控制四件设备；仅用于空间交互演示，不作为真实用电安全依据。
-      </p>
-    </aside>
+        </SheetClose>
+        <Separator />
+        <ScrollArea key={state.selected} className="min-h-0 flex-1">
+          <div className="space-y-4 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={active ? 'default' : 'secondary'}>
+                {!state.masterOn
+                  ? '全寝总电源已关'
+                  : station && !state.strips[station.id]
+                    ? '本床位已断电'
+                    : device && !device.on
+                      ? '设备待机'
+                      : '正在供电'}
+              </Badge>
+              <Badge variant="outline">模拟数据</Badge>
+              {spec && (
+                <Badge variant="secondary">
+                  {station?.name} · 插孔 {spec.socket + 1}
+                </Badge>
+              )}
+            </div>
+            {spec && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={state.focus}
+              >
+                <Focus />
+                近距离检查模型
+              </Button>
+            )}
+            <Card>
+              <CardHeader>
+                <CardDescription>
+                  {spec
+                    ? '当前设备功率'
+                    : station
+                      ? '本床位总功率'
+                      : '全寝总功率'}
+                </CardDescription>
+                <CardTitle className="text-4xl tabular-nums">
+                  {watts.toFixed(1)}{' '}
+                  <span className="text-sm font-normal text-muted-foreground">
+                    W
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Progress
+                  value={Math.min(100, (watts / limit) * 100)}
+                  aria-label="负载占比"
+                />
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>
+                    {spec ? '示例额定功率' : '演示负载阈值'} {limit} W
+                  </span>
+                  <span className="tabular-nums">
+                    {((watts / limit) * 100).toFixed(1)}%
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="power-switch">
+                      {spec
+                        ? '设备电源'
+                        : station
+                          ? '此床位插排总开关'
+                          : '全寝总电源'}
+                    </Label>
+                    <CardDescription>
+                      {station
+                        ? '不改变其他床位的电源状态'
+                        : '控制所有床位上游电源'}
+                    </CardDescription>
+                  </div>
+                  <Switch
+                    id="power-switch"
+                    aria-label={powerLabel}
+                    checked={active}
+                    disabled={
+                      (!!spec &&
+                        (!state.masterOn || !state.strips[spec.stationId])) ||
+                      (!!station && !state.masterOn)
+                    }
+                    onCheckedChange={(checked) =>
+                      spec
+                        ? state.toggle(spec.id)
+                        : station
+                          ? state.setStrip(station.id, checked)
+                          : state.setMaster(checked)
+                    }
+                  />
+                </div>
+                {spec && device && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center justify-between gap-4">
+                      <Label id="device-level-label">{levelLabel}</Label>
+                      <Badge variant="secondary">
+                        {Math.round(device.level * 100)}%
+                      </Badge>
+                    </div>
+                    <Slider
+                      aria-labelledby="device-level-label"
+                      min={10}
+                      max={100}
+                      step={5}
+                      value={[Math.round(device.level * 100)]}
+                      onValueChange={([value]) =>
+                        state.setLevel(spec.id, value / 100)
+                      }
+                      disabled={!active}
+                    />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>功率轨迹</CardTitle>
+                <CardDescription>最近 60 秒 · 每秒采样</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PowerChart
+                  history={state.history}
+                  device={spec?.id}
+                  station={station?.id}
+                />
+              </CardContent>
+            </Card>
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="gap-3">
+                <CardHeader className="px-4">
+                  <CardDescription>本次模拟耗电</CardDescription>
+                  <CardTitle className="text-lg tabular-nums">
+                    {(energy / 1000).toFixed(4)}
+                  </CardTitle>
+                  <CardDescription>kWh</CardDescription>
+                </CardHeader>
+              </Card>
+              <Card className="gap-3">
+                <CardHeader className="px-4">
+                  <CardDescription>估算电流 · {VOLTAGE}V</CardDescription>
+                  <CardTitle className="text-lg tabular-nums">
+                    {(watts / VOLTAGE).toFixed(2)}
+                  </CardTitle>
+                  <CardDescription>A</CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+            {!spec && station && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>四孔插排</CardTitle>
+                  <CardDescription>每孔一件设备，点击查看详情</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {devices.map((d) => (
+                    <Button
+                      key={d.id}
+                      variant="outline"
+                      className="h-auto w-full justify-between gap-2 py-3"
+                      onClick={() => state.select(d.id)}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Badge variant="secondary">{d.socket + 1}</Badge>
+                        {d.name}
+                      </span>
+                      <span className="text-xs tabular-nums">
+                        {state.devices[d.id].watts.toFixed(1)} W
+                      </span>
+                    </Button>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+            {!station && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>四个独立床位</CardTitle>
+                  <CardDescription>选择一个床位查看独立插排</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {STATIONS.map((s) => (
+                    <Button
+                      key={s.id}
+                      variant="outline"
+                      className="h-auto w-full justify-between py-3"
+                      onClick={() => state.selectStation(s.id)}
+                    >
+                      <span>
+                        {s.number} · {s.name}
+                      </span>
+                      <span className="text-xs tabular-nums">
+                        {stationDevices(s.id)
+                          .reduce((n, d) => n + state.devices[d.id].watts, 0)
+                          .toFixed(1)}{' '}
+                        W
+                      </span>
+                    </Button>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+            {spec && (
+              <>
+                <CardDescription>{spec.description}</CardDescription>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => state.select(spec.stationId)}
+                >
+                  返回本床位插排
+                  <ArrowRight />
+                </Button>
+              </>
+            )}
+            {station && !spec && (
+              <div className="grid gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => state.selectStation(station.id)}
+                >
+                  <Focus />
+                  查看完整床位
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    state.inspect('strip')
+                    state.closePanel()
+                  }}
+                >
+                  <Zap />
+                  近看插头与走线
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    state.inspect('bed')
+                    state.closePanel()
+                  }}
+                >
+                  <Layers />
+                  近看上铺与护栏
+                </Button>
+              </div>
+            )}
+            {watts > limit && (
+              <Alert variant="destructive">
+                <Info />
+                <AlertTitle>超过演示阈值</AlertTitle>
+                <AlertDescription>
+                  仅作提示，不模拟真实断路保护。
+                </AlertDescription>
+              </Alert>
+            )}
+            {station && (
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => state.select('room')}
+              >
+                查看全寝总用电
+                <ArrowRight />
+              </Button>
+            )}
+            <Alert>
+              <Info />
+              <AlertTitle>模拟演示</AlertTitle>
+              <AlertDescription>
+                功率与耗电均为模拟值，各床位独立控制，仅用于空间交互演示。
+              </AlertDescription>
+            </Alert>
+          </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
   )
 }

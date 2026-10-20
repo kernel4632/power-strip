@@ -1,8 +1,53 @@
 import { Component, Suspense, lazy, useEffect, useState } from 'react'
-import type { CSSProperties, ErrorInfo, ReactElement, ReactNode } from 'react'
-import * as Tooltip from '@radix-ui/react-tooltip'
-import * as ToggleGroup from '@radix-ui/react-toggle-group'
-import * as Popover from '@radix-ui/react-popover'
+import type { ErrorInfo, ReactNode } from 'react'
+import {
+  Home,
+  Sun,
+  Moon,
+  Leaf,
+  ChartNoAxesCombined,
+  Focus,
+  Zap,
+  Eye,
+  Layers,
+  Info,
+  Mouse,
+  ChevronDown,
+  X,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Toggle } from '@/components/ui/toggle'
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from '@/components/ui/tooltip'
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@/components/ui/popover'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Kbd, KbdGroup } from '@/components/ui/kbd'
+import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/hooks/use-mobile'
 import {
   CAMERA_VIEWS,
   DEVICE_CATALOG,
@@ -12,8 +57,6 @@ import {
   stationDevices,
 } from './data/catalog'
 import { usePowerStore } from './store/usePowerStore'
-import { Icon } from './ui/Icon'
-import { Button } from './ui/Button'
 import { PowerChart } from './ui/PowerChart'
 import { PowerPanel } from './ui/PowerPanel'
 import { Hotspots } from './ui/Hotspots'
@@ -35,34 +78,26 @@ class SceneBoundary extends Component<
   }
   render() {
     return this.state.failed ? (
-      <div className="scene-fallback">
-        <h2>场景暂时无法加载</h2>
-        <p>请开启硬件加速后刷新，能源面板仍可使用。</p>
-        <button onClick={() => location.reload()}>重新加载</button>
+      <div className="grid h-full place-items-center p-4">
+        <Alert className="max-w-sm">
+          <Info />
+          <AlertTitle>场景暂时无法加载</AlertTitle>
+          <AlertDescription>
+            请开启硬件加速后刷新，能源面板仍可使用。
+            <Button variant="outline" onClick={() => location.reload()}>
+              重新加载
+            </Button>
+          </AlertDescription>
+        </Alert>
       </div>
     ) : (
       this.props.children
     )
   }
 }
-function Tip({ label, children }: { label: string; children: ReactElement }) {
-  return (
-    <Tooltip.Root>
-      <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content
-          className="ui-tooltip"
-          sideOffset={10}
-          collisionPadding={12}
-        >
-          {label}
-          <Tooltip.Arrow />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
-  )
-}
+
 export default function App() {
+  const isMobile = useIsMobile()
   const state = usePowerStore()
   const [menu, setMenu] = useState<'camera' | 'help' | null>(null)
   const [expandedEnergy, setExpandedEnergy] = useState(false)
@@ -81,6 +116,9 @@ export default function App() {
   const active = state.activeStation ? STATION_MAP[state.activeStation] : null
   const panelOpen = state.selected !== null
   useEffect(() => {
+    document.documentElement.classList.toggle('dark', state.night)
+  }, [state.night])
+  useEffect(() => {
     let last = performance.now()
     const timer = setInterval(() => {
       const now = performance.now()
@@ -88,21 +126,18 @@ export default function App() {
       last = now
     }, 1000)
     const key = (e: KeyboardEvent) => {
-      if (e.defaultPrevented) return
-      if (e.key === 'Escape') {
-        usePowerStore.getState().closePanel()
-        setMenu(null)
-      }
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return
       if (
         (e.target as HTMLElement).closest(
-          'input,select,textarea,[contenteditable="true"],[data-radix-popper-content-wrapper]',
-        ) ||
-        e.ctrlKey ||
-        e.metaKey ||
-        e.altKey
+          'input,select,textarea,[contenteditable="true"],[role="slider"],[data-slot="popover-content"]',
+        )
       )
         return
       const s = usePowerStore.getState()
+      if (e.key === 'Escape') {
+        s.closePanel()
+        setMenu(null)
+      }
       if (/^[1-4]$/.test(e.key)) s.selectStation(STATIONS[Number(e.key) - 1].id)
       if (e.key === '0') s.setView('overview')
       if (e.key.toLowerCase() === 'f') s.toggleFlow()
@@ -116,18 +151,23 @@ export default function App() {
     }
   }, [])
   return (
-    <Tooltip.Provider delayDuration={250}>
-      <main
-        className={`experience ${state.night ? 'experience--night' : ''} ${panelOpen ? 'experience--inspecting' : ''}`}
-      >
-        <div className="scene-stage">
+    <TooltipProvider>
+      <main className="relative isolate h-dvh overflow-hidden bg-background text-foreground">
+        <div className={cn('absolute inset-0', panelOpen && 'md:right-96')}>
           <SceneBoundary>
             <Suspense
               fallback={
-                <div className="scene-loading">
-                  <span />
-                  <p>正在准备你的宿舍</p>
-                  <small>ROOM 302 · DORM LAB</small>
+                <div className="grid h-full place-items-center p-4">
+                  <Card className="w-72">
+                    <CardHeader>
+                      <CardTitle>正在准备你的宿舍</CardTitle>
+                      <CardDescription>ROOM 302 · DORM LAB</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Skeleton className="h-32 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </CardContent>
+                  </Card>
                 </div>
               }
             >
@@ -135,387 +175,417 @@ export default function App() {
             </Suspense>
           </SceneBoundary>
         </div>
-        <div className="scene-shade" />
         <Hotspots />
-        <header className="workspace-header">
-          <a
-            className="workspace-brand"
-            href="#"
-            onClick={(e) => {
-              e.preventDefault()
-              state.setView('overview')
-            }}
+        <header
+          className={cn(
+            'pointer-events-none absolute inset-x-4 top-4 z-30 flex flex-wrap items-center justify-between gap-3 md:gap-4',
+            panelOpen && 'md:right-100',
+          )}
+        >
+          <Button
+            variant="outline"
+            className="pointer-events-auto h-auto gap-3 py-2"
             aria-label="返回四人寝全景"
+            onClick={() => state.setView('overview')}
           >
-            <span className="brand-symbol">
-              <Icon name="home" size={22} />
+            <Home />
+            <span className="text-left">
+              DORM LAB
+              <span className="hidden text-xs font-normal text-muted-foreground sm:block">
+                302 · 四人寝用电实验室
+              </span>
             </span>
-            <span>
-              DORM<span className="brand-light">LAB</span>
-              <small>302 / 四人寝用电实验室</small>
-            </span>
-          </a>
-          <ToggleGroup.Root
-            className="mode-segment glass"
+          </Button>
+          <ToggleGroup
             type="single"
+            variant="outline"
+            className="pointer-events-auto order-last mx-auto bg-background md:order-none md:mx-0"
             value={state.mode}
             onValueChange={(value) => {
               if (value) state.setMode(value as SceneMode)
             }}
             aria-label="生活模式"
           >
-            {SCENE_MODES.map((mode, i) => (
-              <ToggleGroup.Item
-                key={mode.id}
-                value={mode.id}
-                aria-label={mode.label}
-              >
-                <Icon
-                  name={i === 0 ? 'sun' : i === 1 ? 'moon' : 'leaf'}
-                  size={16}
-                />
-                <span>{mode.label}</span>
-              </ToggleGroup.Item>
-            ))}
-          </ToggleGroup.Root>
-          <div className="header-actions">
-            <Tip label={state.night ? '切换至日间 · L' : '切换至夜间 · L'}>
-              <button
-                className="round-button glass"
-                onClick={state.toggleNight}
-                aria-label={state.night ? '切换日间场景' : '切换夜间场景'}
-              >
-                <Icon name={state.night ? 'moon' : 'sun'} size={18} />
-              </button>
-            </Tip>
+            {SCENE_MODES.map((mode, i) => {
+              const ModeIcon = [Sun, Moon, Leaf][i]
+              return (
+                <ToggleGroupItem
+                  key={mode.id}
+                  value={mode.id}
+                  aria-label={mode.label}
+                >
+                  <ModeIcon />
+                  <span>{mode.label}</span>
+                </ToggleGroupItem>
+              )
+            })}
+          </ToggleGroup>
+          <div className="pointer-events-auto flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={state.toggleNight}
+                  aria-label={state.night ? '切换日间场景' : '切换夜间场景'}
+                >
+                  {state.night ? <Moon /> : <Sun />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>日夜切换 · L</TooltipContent>
+            </Tooltip>
             <Button
-              variant="primary"
-              className={`energy-entry ${state.selected === 'room' ? 'is-active' : ''}`}
               onClick={() =>
                 state.select(state.selected === 'room' ? null : 'room')
               }
               aria-label="全寝能源面板"
               aria-expanded={state.selected === 'room'}
             >
-              <Icon name="chart" size={17} />
-              <span>能源概览</span>
-              <Icon name="arrow" size={16} />
+              <ChartNoAxesCombined />
+              <span className="hidden sm:inline">能源概览</span>
             </Button>
           </div>
         </header>
-        <div className="workspace-context">
-          <span className="context-eyebrow">
-            {active
-              ? `PERSONAL SPACE / ${active.number}`
-              : 'EXPLORE YOUR EVERYDAY'}
-          </span>
-          <h1>{active ? active.theme : '四个位置，一起生活。'}</h1>
-          <p>
-            {active
-              ? `${active.name} · 独立四孔插排`
-              : '选择床位，看看每一瓦流向哪里。'}
-          </p>
-          {active && state.cutaway && (
-            <span className="cutaway-badge">
-              <Icon name="layers" size={12} />
-              上铺透明检查
-            </span>
+        <Card
+          className={cn(
+            'pointer-events-none absolute left-4 top-24 z-20 hidden w-64 gap-3 md:flex',
+            panelOpen && 'md:hidden',
           )}
-        </div>
-        <section
-          className={`live-energy glass ${expandedEnergy ? 'live-energy--expanded' : ''}`}
-          aria-label="全寝功率概览"
         >
-          <button
-            className="live-energy__toggle"
-            onClick={() => setExpandedEnergy(!expandedEnergy)}
-            aria-expanded={expandedEnergy}
-            aria-controls="live-energy-detail"
-            aria-label={expandedEnergy ? '收起功率趋势' : '展开功率趋势'}
-          >
-            <span className="live-heading">
-              <i className="status-dot" />
-              全寝实时功率<small>模拟</small>
-            </span>
-            <span className="live-reading">
-              <strong>{total.toFixed(0)}</strong>
-              <span>W</span>
-              <Icon name="chart" size={18} />
-            </span>
-            <span className="live-caption">
-              {activeCount} / {DEVICE_CATALOG.length} 件设备运行
-              <span>
-                {expandedEnergy ? '收起' : '查看趋势'}{' '}
-                {expandedEnergy ? '−' : '+'}
-              </span>
-            </span>
-          </button>
-          {expandedEnergy && (
-            <div id="live-energy-detail" className="live-energy__detail">
-              <PowerChart history={state.history} compact />
-              <div>
-                <span>{(energy / 1000).toFixed(4)} kWh</span>
-                <button
-                  onClick={() => state.select('room')}
-                  aria-label="打开全寝用电详情"
-                >
-                  详情 <Icon name="arrow" size={13} />
-                </button>
-              </div>
-            </div>
+          <CardHeader className="gap-2">
+            <CardDescription>
+              {active ? `BED ${active.number}` : 'ROOM 302'}
+            </CardDescription>
+            <CardTitle>
+              {active ? active.theme : '四个位置，一起生活。'}
+            </CardTitle>
+            <CardDescription>
+              {active
+                ? `${active.name} · 独立四孔插排`
+                : '选择床位，看看每一瓦流向哪里。'}
+            </CardDescription>
+          </CardHeader>
+          {active && state.cutaway && (
+            <CardContent>
+              <Badge variant="secondary">
+                <Layers />
+                上铺透明检查
+              </Badge>
+            </CardContent>
           )}
-        </section>
-        <nav className="workspace-tools glass" aria-label="场景工具">
-          <Popover.Root
-            open={menu === 'camera'}
-            onOpenChange={(open) => setMenu(open ? 'camera' : null)}
+        </Card>
+        <Collapsible
+          open={expandedEnergy}
+          onOpenChange={setExpandedEnergy}
+          asChild
+        >
+          <Card
+            className={cn(
+              'absolute bottom-32 left-4 z-20 w-44 gap-3 py-4 md:bottom-4 md:w-56',
+              panelOpen && 'hidden',
+            )}
+            aria-label="全寝功率概览"
           >
-            <Popover.Trigger asChild>
-              <button className="rail-button" aria-label="镜头与模型检查">
-                <Icon name="focus" />
-                <span>镜头</span>
-              </button>
-            </Popover.Trigger>
-            <Popover.Portal>
-              <Popover.Content
-                className="ui-popover"
+            <CardHeader className="gap-2 px-4">
+              <div className="flex items-center justify-between gap-2">
+                <CardDescription>全寝实时功率</CardDescription>
+                <Badge variant="outline">模拟</Badge>
+              </div>
+              <CardTitle className="text-3xl tabular-nums">
+                {total.toFixed(0)}{' '}
+                <span className="text-sm font-normal text-muted-foreground">
+                  W
+                </span>
+              </CardTitle>
+              <CardDescription>
+                {activeCount} / {DEVICE_CATALOG.length} 件设备运行
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 px-4">
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  aria-label={expandedEnergy ? '收起功率趋势' : '展开功率趋势'}
+                >
+                  {expandedEnergy ? '收起趋势' : '查看趋势'}
+                  <ChevronDown />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3">
+                <PowerChart history={state.history} compact />
+                <CardDescription className="tabular-nums">
+                  {(energy / 1000).toFixed(4)} kWh
+                </CardDescription>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => state.select('room')}
+                >
+                  查看用电详情
+                </Button>
+              </CollapsibleContent>
+            </CardContent>
+          </Card>
+        </Collapsible>
+        <Card
+          className={cn(
+            'absolute right-4 top-28 z-30 gap-2 p-2 md:top-1/2 md:-translate-y-1/2',
+            panelOpen && 'md:right-100',
+          )}
+        >
+          <nav
+            className="flex flex-row gap-2 md:flex-col"
+            aria-label="场景工具"
+          >
+            <Popover
+              open={menu === 'camera'}
+              onOpenChange={(open) => setMenu(open ? 'camera' : null)}
+            >
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="镜头与模型检查">
+                  <Focus />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                side={isMobile ? 'bottom' : 'left'}
+                align="end"
+                className="w-64"
                 aria-label="观察角度"
-                data-theme={state.night ? 'night' : 'day'}
-                side="left"
-                align="start"
-                sideOffset={12}
-                collisionPadding={12}
               >
-                <div className="popover-heading">
-                  <h2>观察角度</h2>
-                  <Popover.Close
-                    className="icon-button"
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle>观察角度</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     aria-label="关闭镜头菜单"
+                    onClick={() => setMenu(null)}
                   >
-                    <Icon name="close" size={16} />
-                  </Popover.Close>
+                    <X />
+                  </Button>
                 </div>
-                <div className="camera-options">
-                  {(Object.keys(CAMERA_VIEWS) as CameraView[]).map((view) => (
-                    <button
-                      key={view}
-                      className={
-                        !active && state.cameraView === view ? 'selected' : ''
+                <div className="mt-4 flex flex-col gap-2">
+                  {Object.entries(CAMERA_VIEWS).map(([id, view]) => (
+                    <Button
+                      key={id}
+                      variant={
+                        !active && state.cameraView === id
+                          ? 'secondary'
+                          : 'ghost'
                       }
+                      className="justify-start"
                       onClick={() => {
-                        state.setView(view)
+                        state.setView(id as CameraView)
                         setMenu(null)
                       }}
                     >
-                      <Icon
-                        name={
-                          view === 'overview'
-                            ? 'home'
-                            : view === 'top'
-                              ? 'grid'
-                              : 'focus'
-                        }
-                        size={17}
-                      />
-                      {CAMERA_VIEWS[view].label}
-                      {!active && state.cameraView === view && (
-                        <Icon name="check" size={14} />
-                      )}
-                    </button>
+                      {view.label}
+                    </Button>
                   ))}
-                </div>
-                {active && (
-                  <>
-                    <div className="popover-caption">
-                      {active.name} · 模型细节
-                    </div>
-                    <div className="camera-options">
-                      <button
+                  {active && (
+                    <>
+                      <Separator />
+                      <CardDescription>
+                        {active.name} · 模型细节
+                      </CardDescription>
+                      <Button
+                        variant="ghost"
+                        className="justify-start"
                         onClick={() => {
                           state.selectStation(active.id)
+                          state.closePanel()
                           setMenu(null)
                         }}
                       >
-                        <Icon name="home" size={17} />
                         完整床位
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="justify-start"
                         onClick={() => {
                           state.inspect('strip')
                           state.closePanel()
                           setMenu(null)
                         }}
                       >
-                        <Icon name="bolt" size={17} />
                         插头与走线
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="justify-start"
                         onClick={() => {
                           state.inspect('bed')
                           state.closePanel()
                           setMenu(null)
                         }}
                       >
-                        <Icon name="layers" size={17} />
                         上铺与护栏
-                      </button>
-                    </div>
-                  </>
-                )}
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover.Root>
-          <div className="rail-divider" />
-          <Tip label="显示四路能量流动 · F">
-            <button
-              className="rail-button"
-              onClick={state.toggleFlow}
-              aria-pressed={state.energyFlow}
-              aria-label="切换能流"
-            >
-              <Icon name="bolt" />
-              <span>能流</span>
-            </button>
-          </Tip>
-          <Tip label="显示床位与设备标记">
-            <button
-              className="rail-button"
-              onClick={state.toggleLabels}
-              aria-pressed={state.labels}
-              aria-label="切换模型标记"
-            >
-              <Icon name="eye" />
-              <span>标记</span>
-            </button>
-          </Tip>
-          <Tip label="选中床位的上铺透明检查 · X">
-            <button
-              className="rail-button"
-              disabled={!active}
-              onClick={state.toggleCutaway}
-              aria-pressed={!!active && state.cutaway}
-              aria-label="切换上铺透明检查"
-            >
-              <Icon name="layers" />
-              <span>透视</span>
-            </button>
-          </Tip>
-          <div className="rail-divider" />
-          <Popover.Root
-            open={menu === 'help'}
-            onOpenChange={(open) => setMenu(open ? 'help' : null)}
-          >
-            <Popover.Trigger asChild>
-              <button
-                className="rail-button help-trigger"
-                aria-label="交互指南"
-              >
-                <Icon name="info" size={18} />
-              </button>
-            </Popover.Trigger>
-            <Popover.Portal>
-              <Popover.Content
-                className="ui-popover help-content"
-                aria-label="交互指南"
-                data-theme={state.night ? 'night' : 'day'}
-                side="left"
-                sideOffset={12}
-                collisionPadding={12}
-              >
-                <div className="popover-heading">
-                  <h2>从一个床位开始</h2>
-                  <Popover.Close className="icon-button" aria-label="关闭指南">
-                    <Icon name="close" size={16} />
-                  </Popover.Close>
+                      </Button>
+                    </>
+                  )}
                 </div>
-                <p>
-                  点击底部床位，进入你的桌面。点电器查看功率、开关电源和调节负载。
-                </p>
-                <p>
-                  每个床位独立供电。镜头菜单里可以近看插头、走线和上铺结构。
-                </p>
-                <dl className="shortcut-list">
-                  <div>
-                    <dt>拖动 / 滚轮</dt>
-                    <dd>旋转 / 缩放</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <kbd>1</kbd> – <kbd>4</kbd>
-                    </dt>
-                    <dd>切换床位</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <kbd>0</kbd> / <kbd>Esc</kbd>
-                    </dt>
-                    <dd>回全景 / 关详情</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <kbd>F</kbd> / <kbd>X</kbd> / <kbd>L</kbd>
-                    </dt>
-                    <dd>能流 / 透视 / 昼夜</dd>
-                  </div>
-                </dl>
-                <small>所有功率与耗电均为模拟数据。</small>
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover.Root>
-        </nav>
-        <div className="workspace-dock">
-          <ToggleGroup.Root
-            className="station-dock glass"
-            type="single"
-            value={active?.id ?? 'room'}
-            onValueChange={(value) => {
-              if (value === 'room') state.setView('overview')
-              else if (value) state.selectStation(value as StationId)
-            }}
-            aria-label="选择四个独立床位"
-          >
-            <ToggleGroup.Item
-              className="dock-home"
-              value="room"
-              aria-label="返回四人寝全景"
-            >
-              <Icon name="home" size={21} />
-              <span>全寝</span>
-            </ToggleGroup.Item>
-            {STATIONS.map((station) => {
-              const watts = stationDevices(station.id).reduce(
-                (sum, d) => sum + state.devices[d.id].watts,
-                0,
-              )
-              const powered = state.masterOn && state.strips[station.id]
-              return (
-                <ToggleGroup.Item
-                  key={station.id}
-                  value={station.id}
-                  aria-label={`进入${station.name}`}
-                  style={{ '--station-color': station.color } as CSSProperties}
+              </PopoverContent>
+            </Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  pressed={state.energyFlow}
+                  onPressedChange={state.toggleFlow}
+                  aria-label="切换能流"
                 >
-                  <span className="dock-number">{station.number}</span>
-                  <span className="dock-label">
-                    {station.theme}
-                    <small>
-                      <i
-                        className={powered ? 'dock-status' : 'dock-status off'}
-                      />
+                  <Zap />
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>四路能流 · F</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  pressed={state.labels}
+                  onPressedChange={state.toggleLabels}
+                  aria-label="切换模型标记"
+                >
+                  <Eye />
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>床位与设备标记</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  disabled={!active}
+                  pressed={!!active && state.cutaway}
+                  onPressedChange={state.toggleCutaway}
+                  aria-label="切换上铺透明检查"
+                >
+                  <Layers />
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>上铺透明检查 · X</TooltipContent>
+            </Tooltip>
+            <Popover
+              open={menu === 'help'}
+              onOpenChange={(open) => setMenu(open ? 'help' : null)}
+            >
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="交互指南">
+                  <Info />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                side={isMobile ? 'bottom' : 'left'}
+                align="end"
+                aria-label="交互指南"
+                className="w-72"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle>从一个床位开始</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="关闭指南"
+                    onClick={() => setMenu(null)}
+                  >
+                    <X />
+                  </Button>
+                </div>
+                <div className="mt-4 space-y-4">
+                  <CardDescription>
+                    点击床位进入桌面，点电器查看功率、开关和负载。每个床位独立供电。
+                  </CardDescription>
+                  <Separator />
+                  <div className="flex justify-between text-sm">
+                    <KbdGroup>
+                      <Kbd>1</Kbd>–<Kbd>4</Kbd>
+                    </KbdGroup>
+                    <span>切换床位</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <KbdGroup>
+                      <Kbd>0</Kbd>
+                      <Kbd>Esc</Kbd>
+                    </KbdGroup>
+                    <span>回全景 / 关闭详情</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <KbdGroup>
+                      <Kbd>F</Kbd>
+                      <Kbd>X</Kbd>
+                      <Kbd>L</Kbd>
+                    </KbdGroup>
+                    <span>能流 / 透视 / 昼夜</span>
+                  </div>
+                  <CardDescription>
+                    拖动旋转，滚轮缩放。数据均为模拟值。
+                  </CardDescription>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </nav>
+        </Card>
+        <div
+          className={cn(
+            'pointer-events-none absolute inset-x-4 bottom-4 z-30 flex flex-col items-center gap-2',
+            panelOpen && 'md:right-100',
+          )}
+        >
+          <Card className="pointer-events-auto w-full gap-2 p-2 md:w-auto">
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              spacing={1}
+              className="w-full"
+              value={active?.id ?? 'room'}
+              onValueChange={(value) => {
+                if (value === 'room') state.setView('overview')
+                else if (value) state.selectStation(value as StationId)
+              }}
+              aria-label="选择四个独立床位"
+            >
+              <ToggleGroupItem
+                value="room"
+                className="h-auto flex-1 flex-col gap-1 py-2"
+                aria-label="返回四人寝全景"
+              >
+                <Home />
+                <span className="text-xs">全寝</span>
+              </ToggleGroupItem>
+              {STATIONS.map((station) => {
+                const watts = stationDevices(station.id).reduce(
+                  (sum, d) => sum + state.devices[d.id].watts,
+                  0,
+                )
+                const powered = state.masterOn && state.strips[station.id]
+                return (
+                  <ToggleGroupItem
+                    key={station.id}
+                    value={station.id}
+                    className="h-auto flex-1 flex-col gap-1 px-2 py-2 md:px-4"
+                    aria-label={`进入${station.name}`}
+                  >
+                    <span>
+                      {station.number}
+                      <span className="ml-2 hidden md:inline">
+                        {station.theme}
+                      </span>
+                    </span>
+                    <span className="text-xs font-normal text-muted-foreground tabular-nums">
                       {powered ? `${watts.toFixed(0)} W` : '已断电'}
-                    </small>
-                  </span>
-                </ToggleGroup.Item>
-              )
-            })}
-          </ToggleGroup.Root>
-          <p className="dock-hint">
-            <Icon name="mouse" size={13} />
-            <span>拖动旋转 · 滚轮缩放 · 点击设备探索</span>
-          </p>
+                    </span>
+                  </ToggleGroupItem>
+                )
+              })}
+            </ToggleGroup>
+          </Card>
+          <Badge variant="secondary" className="hidden gap-2 md:inline-flex">
+            <Mouse />
+            拖动旋转 · 滚轮缩放 · 点击设备探索
+          </Badge>
         </div>
         <PowerPanel />
       </main>
-    </Tooltip.Provider>
+    </TooltipProvider>
   )
 }

@@ -23,6 +23,7 @@ import {
   toWorld,
 } from '../data/catalog'
 import { usePowerStore } from '../store/usePowerStore'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import type { Point3 } from '../types'
 import { Appliance } from './Appliance'
 import { DormRoom } from './DormRoom'
@@ -362,8 +363,13 @@ export const Scene = memo(function Scene() {
         if (e.type === 'click') usePowerStore.getState().closePanel()
       }}
       fallback={
-        <div className="scene-fallback">
-          请开启浏览器 WebGL 硬件加速。能源面板仍可使用。
+        <div className="grid h-full place-items-center p-4">
+          <Alert className="max-w-sm">
+            <AlertTitle>需要 WebGL 支持</AlertTitle>
+            <AlertDescription>
+              请开启浏览器 WebGL 硬件加速。能源面板仍可使用。
+            </AlertDescription>
+          </Alert>
         </div>
       }
     >
