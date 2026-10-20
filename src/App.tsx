@@ -5,6 +5,7 @@ import {
   Sun,
   Moon,
   Leaf,
+  SunMoon,
   ChartNoAxesCombined,
   Focus,
   Zap,
@@ -47,6 +48,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { cn } from '@/lib/utils'
+import { formatEnergy } from '@/lib/format'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
   CAMERA_VIEWS,
@@ -109,6 +111,7 @@ export default function App() {
     (sum, d) => sum + state.devices[d.id].energyWh,
     0,
   )
+  const energyText = formatEnergy(energy)
   const activeCount = DEVICE_CATALOG.filter(
     (d) =>
       state.masterOn && state.strips[d.stationId] && state.devices[d.id].on,
@@ -117,6 +120,14 @@ export default function App() {
   const panelOpen = state.selected !== null
   useEffect(() => {
     document.documentElement.classList.toggle('dark', state.night)
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) {
+      const token = state.night ? '--scene-night' : '--scene-day'
+      const value = getComputedStyle(document.documentElement)
+        .getPropertyValue(token)
+        .trim()
+      if (value) meta.setAttribute('content', value)
+    }
   }, [state.night])
   useEffect(() => {
     let last = performance.now()
@@ -153,7 +164,12 @@ export default function App() {
   return (
     <TooltipProvider>
       <main className="relative isolate h-dvh overflow-hidden bg-background text-foreground">
-        <div className={cn('absolute inset-0', panelOpen && 'md:right-96')}>
+        <div
+          className={cn(
+            'absolute inset-0',
+            panelOpen && 'max-md:bottom-1/2 md:right-96',
+          )}
+        >
           <SceneBoundary>
             <Suspense
               fallback={
@@ -178,7 +194,7 @@ export default function App() {
         <Hotspots />
         <header
           className={cn(
-            'pointer-events-none absolute inset-x-4 top-4 z-30 flex flex-wrap items-center justify-between gap-3 md:gap-4',
+            'pointer-events-none absolute inset-x-4 top-4 z-30 flex flex-wrap items-center justify-between gap-2 md:gap-4',
             panelOpen && 'md:right-100',
           )}
         >
@@ -215,7 +231,7 @@ export default function App() {
                   aria-label={mode.label}
                 >
                   <ModeIcon />
-                  <span>{mode.label}</span>
+                  <span className="hidden lg:inline">{mode.label}</span>
                 </ToggleGroupItem>
               )
             })}
@@ -229,12 +245,12 @@ export default function App() {
                   onClick={state.toggleNight}
                   aria-label={state.night ? '切换日间场景' : '切换夜间场景'}
                 >
-                  {state.night ? <Moon /> : <Sun />}
+                  <SunMoon />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>日夜切换 · L</TooltipContent>
+              </TooltipTrigger>              <TooltipContent>日夜切换 · L</TooltipContent>
             </Tooltip>
             <Button
+              variant="outline"
               onClick={() =>
                 state.select(state.selected === 'room' ? null : 'room')
               }
@@ -248,7 +264,7 @@ export default function App() {
         </header>
         <Card
           className={cn(
-            'pointer-events-none absolute left-4 top-24 z-20 hidden w-64 gap-3 md:flex',
+            'pointer-events-none absolute left-4 top-24 z-20 hidden w-72 gap-3 md:flex',
             panelOpen && 'md:hidden',
           )}
         >
@@ -316,7 +332,7 @@ export default function App() {
               <CollapsibleContent className="space-y-3">
                 <PowerChart history={state.history} compact />
                 <CardDescription className="tabular-nums">
-                  {(energy / 1000).toFixed(4)} kWh
+                  本次 {energyText.value} {energyText.unit}
                 </CardDescription>
                 <Button
                   variant="secondary"
@@ -332,7 +348,7 @@ export default function App() {
         </Collapsible>
         <Card
           className={cn(
-            'absolute right-4 top-28 z-30 gap-2 p-2 md:top-1/2 md:-translate-y-1/2',
+            'absolute right-4 top-20 z-30 gap-2 p-2 md:top-1/2 md:-translate-y-1/2',
             panelOpen && 'md:right-100',
           )}
         >
@@ -531,7 +547,7 @@ export default function App() {
             panelOpen && 'md:right-100',
           )}
         >
-          <Card className="pointer-events-auto w-full gap-2 p-2 md:w-auto">
+          <Card className="pointer-events-auto w-full max-w-full gap-2 p-2 lg:w-auto">
             <ToggleGroup
               type="single"
               variant="outline"
@@ -546,7 +562,7 @@ export default function App() {
             >
               <ToggleGroupItem
                 value="room"
-                className="h-auto flex-1 flex-col gap-1 py-2"
+                className="h-auto min-w-0 flex-1 flex-col gap-1 px-1 py-2 lg:flex-none lg:px-4"
                 aria-label="返回四人寝全景"
               >
                 <Home />
@@ -562,16 +578,16 @@ export default function App() {
                   <ToggleGroupItem
                     key={station.id}
                     value={station.id}
-                    className="h-auto flex-1 flex-col gap-1 px-2 py-2 md:px-4"
+                    className="h-auto min-w-0 flex-1 flex-col gap-1 px-1 py-2 lg:flex-none lg:px-4"
                     aria-label={`进入${station.name}`}
                   >
-                    <span>
+                    <span className="max-w-full truncate">
                       {station.number}
-                      <span className="ml-2 hidden md:inline">
+                      <span className="ml-2 hidden lg:inline">
                         {station.theme}
                       </span>
                     </span>
-                    <span className="text-xs font-normal text-muted-foreground tabular-nums">
+                    <span className="max-w-full truncate text-xs font-normal text-muted-foreground tabular-nums">
                       {powered ? `${watts.toFixed(0)} W` : '已断电'}
                     </span>
                   </ToggleGroupItem>

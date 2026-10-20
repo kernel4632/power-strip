@@ -18,7 +18,7 @@
 | 镜头菜单、指南 | Popover、Button、Separator、Kbd |
 | 桌面侧栏、手机底部详情 | Sheet、ScrollArea、Card |
 | 电源、负载、功率占比 | Switch、Label、Slider、Progress |
-| 功率曲线、悬浮数据 | ChartContainer、ChartTooltip（官方 Recharts 组合方式） |
+| 功率曲线、悬浮读数 | Sparkline（`src/components/ui/sparkline.tsx`，项目内唯一的自绘控件） |
 | 加载、错误与状态说明 | Skeleton、Alert |
 
 ## 全局变量
@@ -34,7 +34,9 @@
 
 官方源码仅做了必要的主题及可访问性接入：固定 white/black 替换为语义颜色，少量 px/rem 尺寸替换为标准工具类或全局变量，Slider 将可访问名称传到 Thumb，Progress 向 Root 传递数值，移动 hook 读取全局断点。没有添加自制控件皮肤。更新官方组件后需重新核对这些适配。MIT 许可保存在 `docs/third-party/shadcn-ui-LICENSE.md`。
 
-图表使用官方 Chart 包装 Recharts，按需加载；不再维护手写 SVG 曲线。3D 场景几何、材质和设备自身的屏幕贴图不属于二维 UI。场景标签只保留来自相机投影的动态坐标，标签本身使用 shadcn Button / Badge，不读取模型材质色作为 UI 配色。
+图表是唯一例外：官方 Chart 组件依赖 Recharts，单个 60 点曲线的分包为 324 kB（gzip 97 kB），只为了画一条折线。`src/components/ui/sparkline.tsx` 用归一化 viewBox、非缩放描边和自适应纵轴实现同一件事，约 150 行、无运行时依赖。它不是业务文件里的手写 SVG，而是和官方组件同级的受控原语：样式只用 Tailwind 语义类，纵轴随数据留白，悬浮读数走 Popover 同款语义色。若后续需要堆叠柱、饼图或多序列对比，应重新评估是否引入图表库，而不是在 Sparkline 上继续加功能。
+
+3D 场景几何、材质和设备自身的屏幕贴图不属于二维 UI。场景背景色不写死在组件里，改由 `index.css` 的 `--scene-day` / `--scene-night` 提供，`Scene.tsx` 读取后转成 three 的 `Color`，`App.tsx` 用同一对变量同步 `theme-color`，避免浏览器状态栏和实际背景不一致。场景标签只保留来自相机投影的动态坐标，标签本身使用 shadcn Button / Badge，不读取模型材质色作为 UI 配色。
 
 ## 验证
 

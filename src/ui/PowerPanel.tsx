@@ -1,4 +1,4 @@
-import { Focus, Zap, Layers, ArrowRight, X, Info } from 'lucide-react'
+import { Focus, Zap, Layers, ArrowRight, ArrowLeft, X, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -25,6 +25,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
+import { formatEnergy, loadLevel } from '@/lib/format'
 import {
   CIRCUIT_LIMIT,
   DEVICE_CATALOG,
@@ -74,6 +75,8 @@ export function PowerPanel() {
       : spec?.kind === 'fan'
         ? '风扇转速'
         : '模拟负载'
+  const level = loadLevel(watts, limit)
+  const energyText = formatEnergy(energy)
   return (
     <Sheet
       open={open}
@@ -87,7 +90,9 @@ export function PowerPanel() {
         showCloseButton={false}
         className={cn(
           'gap-0',
-          isMobile ? 'bottom-24 h-1/2' : 'w-96 sm:max-w-96',
+          isMobile
+            ? 'bottom-26 h-1/2 rounded-t-2xl'
+            : 'w-96 sm:max-w-96',
         )}
         onInteractOutside={(event) => event.preventDefault()}
         aria-label="床位与设备详情"
@@ -105,7 +110,7 @@ export function PowerPanel() {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-4"
+            className="absolute right-4 top-4 size-10"
             aria-label="关闭详情面板"
           >
             <X />
@@ -115,7 +120,7 @@ export function PowerPanel() {
         <ScrollArea key={state.selected} className="min-h-0 flex-1">
           <div className="space-y-4 p-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={active ? 'default' : 'secondary'}>
+              <Badge variant={level === 'over' ? 'destructive' : 'secondary'}>
                 {!state.masterOn
                   ? '全寝总电源已关'
                   : station && !state.strips[station.id]
@@ -161,15 +166,35 @@ export function PowerPanel() {
                 <Progress
                   value={Math.min(100, (watts / limit) * 100)}
                   aria-label="负载占比"
+                  className={cn(
+                    '[&_[data-slot=progress-indicator]]:bg-chart-2',
+                    level === 'near' &&
+                      '[&_[data-slot=progress-indicator]]:bg-warning',
+                    level === 'over' &&
+                      '[&_[data-slot=progress-indicator]]:bg-destructive',
+                  )}
                 />
                 <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                   <span>
                     {spec ? '示例额定功率' : '演示负载阈值'} {limit} W
                   </span>
-                  <span className="tabular-nums">
+                  <span
+                    className={cn(
+                      'tabular-nums',
+                      level === 'near' && 'text-warning',
+                      level === 'over' && 'text-destructive',
+                    )}
+                  >
                     {((watts / limit) * 100).toFixed(1)}%
                   </span>
                 </div>
+                {level !== 'calm' && (
+                  <CardDescription>
+                    {level === 'over'
+                      ? '已超过演示阈值，不模拟真实断路保护。'
+                      : '已接近演示阈值。'}
+                  </CardDescription>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -249,9 +274,9 @@ export function PowerPanel() {
                 <CardHeader className="px-4">
                   <CardDescription>本次模拟耗电</CardDescription>
                   <CardTitle className="text-lg tabular-nums">
-                    {(energy / 1000).toFixed(4)}
+                    {energyText.value}
                   </CardTitle>
-                  <CardDescription>kWh</CardDescription>
+                  <CardDescription>{energyText.unit}</CardDescription>
                 </CardHeader>
               </Card>
               <Card className="gap-3">
@@ -322,12 +347,12 @@ export function PowerPanel() {
               <>
                 <CardDescription>{spec.description}</CardDescription>
                 <Button
-                  variant="outline"
-                  className="w-full"
+                  variant="ghost"
+                  className="w-full justify-start"
                   onClick={() => state.select(spec.stationId)}
                 >
+                  <ArrowLeft />
                   返回本床位插排
-                  <ArrowRight />
                 </Button>
               </>
             )}
@@ -381,13 +406,9 @@ export function PowerPanel() {
                 <ArrowRight />
               </Button>
             )}
-            <Alert>
-              <Info />
-              <AlertTitle>模拟演示</AlertTitle>
-              <AlertDescription>
-                功率与耗电均为模拟值，各床位独立控制，仅用于空间交互演示。
-              </AlertDescription>
-            </Alert>
+            <CardDescription>
+              功率与耗电均为模拟值，各床位独立控制，仅用于空间交互演示。
+            </CardDescription>
           </div>
         </ScrollArea>
       </SheetContent>

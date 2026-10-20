@@ -1,25 +1,37 @@
-import { lazy, Suspense } from 'react'
-import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+import { Sparkline } from '@/components/ui/sparkline'
 import type { DeviceId, PowerSample, StationId } from '../types'
 
-const Chart = lazy(() =>
-  import('./PowerChartContent').then((m) => ({ default: m.PowerChartContent })),
-)
-
-export function PowerChart(props: {
+export function PowerChart({
+  history,
+  device,
+  station,
+  compact,
+}: {
   history: PowerSample[]
   device?: DeviceId
   station?: StationId
   compact?: boolean
 }) {
+  const data = history.slice(-60).map((sample) => ({
+    label: new Date(sample.time).toLocaleTimeString('zh-CN', { hour12: false }),
+    value: device
+      ? sample.devices[device]
+      : station
+        ? sample.stations[station]
+        : sample.total,
+  }))
   return (
-    <Suspense
-      fallback={
-        <Skeleton className={cn('h-40 w-full', props.compact && 'h-16')} />
+    <Sparkline
+      data={data}
+      compact={compact}
+      unit="W"
+      label={
+        device
+          ? '设备模拟功率趋势'
+          : station
+            ? '床位模拟功率趋势'
+            : '全寝模拟功率趋势'
       }
-    >
-      <Chart {...props} />
-    </Suspense>
+    />
   )
 }
