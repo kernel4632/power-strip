@@ -115,7 +115,7 @@ export function PowerPanel() {
         </SheetClose>
         <Separator />
         <ScrollArea key={state.selected} className="min-h-0 flex-1">
-          <div className="space-y-4 p-4">
+          <div className="space-y-6 p-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-(--motion-control) motion-safe:ease-ui motion-safe:md:slide-in-from-bottom-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={level === 'over' ? 'destructive' : 'secondary'}>
                 {!state.masterOn
@@ -142,7 +142,7 @@ export function PowerPanel() {
                 查看设备
               </Button>
             )}
-            <Card>
+            <Card className="bg-linear-to-br from-card to-secondary shadow-none">
               <CardHeader>
                 <CardTitle className="text-sm">
                   {spec
@@ -172,8 +172,8 @@ export function PowerPanel() {
                 />
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="space-y-4">
+            <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
+              <CardContent className="space-y-4 px-2">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="power-switch">
@@ -226,11 +226,11 @@ export function PowerPanel() {
                 )}
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
+            <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
+              <CardHeader className="px-2">
                 <CardTitle>功率轨迹</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-2">
                 <PowerChart
                   history={state.history}
                   device={spec?.id}
@@ -238,17 +238,18 @@ export function PowerPanel() {
                 />
               </CardContent>
             </Card>
+            <Separator />
             <div className="grid grid-cols-2 gap-4">
-              <Card className="gap-3">
-                <CardHeader className="px-4">
+              <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
+                <CardHeader className="px-2">
                   <CardTitle className="text-sm">累计用电</CardTitle>
                   <CardTitle className="text-lg tabular-nums">
                     {energyText.value} {energyText.unit}
                   </CardTitle>
                 </CardHeader>
               </Card>
-              <Card className="gap-3">
-                <CardHeader className="px-4">
+              <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
+                <CardHeader className="px-2">
                   <CardTitle className="text-sm">电流</CardTitle>
                   <CardTitle className="text-lg tabular-nums">
                     {(watts / VOLTAGE).toFixed(2)} A
@@ -257,15 +258,15 @@ export function PowerPanel() {
               </Card>
             </div>
             {!spec && station && (
-              <Card>
-                <CardHeader>
+              <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
+                <CardHeader className="px-2">
                   <CardTitle>四孔插排</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-2 px-0">
                   {devices.map((d) => (
                     <Button
                       key={d.id}
-                      variant="outline"
+                      variant="ghost"
                       className="h-auto w-full justify-between gap-2 py-3"
                       onClick={() => state.select(d.id)}
                     >
@@ -282,15 +283,15 @@ export function PowerPanel() {
               </Card>
             )}
             {!station && (
-              <Card>
-                <CardHeader>
+              <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
+                <CardHeader className="px-2">
                   <CardTitle>四个独立床位</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-2 px-0">
                   {STATIONS.map((s) => (
                     <Button
                       key={s.id}
-                      variant="outline"
+                      variant="ghost"
                       className="h-auto w-full justify-between py-3"
                       onClick={() => state.selectStation(s.id)}
                     >

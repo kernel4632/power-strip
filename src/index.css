@@ -40,6 +40,17 @@
 
 @theme {
   --spacing: 0.25rem;
+  --ease-ui: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-disclosure-open: disclosure-open var(--motion-panel) var(--ease-ui);
+  --animate-disclosure-close: disclosure-close var(--motion-control) var(--ease-ui);
+  @keyframes disclosure-open {
+    from { height: 0; opacity: 0; }
+    to { height: var(--radix-collapsible-content-height); opacity: 1; }
+  }
+  @keyframes disclosure-close {
+    from { height: var(--radix-collapsible-content-height); opacity: 1; }
+    to { height: 0; opacity: 0; }
+  }
   --font-sans:
     'Inter', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
@@ -50,6 +61,9 @@
 
 /* shadcn/ui neutral theme. All application UI colors are consumed through these tokens. */
 :root {
+  --motion-fast: 140ms;
+  --motion-control: 220ms;
+  --motion-panel: 280ms;
   --focus-ring-width: calc(var(--spacing) * 0.75);
   --indicator-border-width: calc(var(--spacing) * 0.375);
   --radius: 0.625rem;
@@ -130,5 +144,12 @@
   }
   [hidden] {
     display: none !important;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

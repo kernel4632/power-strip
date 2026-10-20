@@ -203,7 +203,7 @@ export default function App() {
                   onClick={state.toggleNight}
                   aria-label={state.night ? '切换日间场景' : '切换夜间场景'}
                 >
-                  <SunMoon />
+                  <SunMoon className={cn('transition-transform duration-(--motion-panel) ease-ui', state.night && 'rotate-180')} />
                 </Button>
               </TooltipTrigger>              <TooltipContent>日夜切换 · L</TooltipContent>
             </Tooltip>
@@ -227,7 +227,7 @@ export default function App() {
         >
           <Card
             className={cn(
-              'absolute bottom-4 left-4 z-20 w-44 gap-3 py-4 md:bottom-4 md:w-56',
+              'absolute bottom-4 left-4 z-20 w-44 gap-3 bg-linear-to-br from-card to-secondary py-4 md:bottom-4 md:w-56',
               panelOpen && 'hidden',
             )}
             aria-label="全寝功率概览"
@@ -241,7 +241,7 @@ export default function App() {
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 px-4">
+            <CardContent className="px-4">
               <CollapsibleTrigger asChild>
                 <Button
                   variant="outline"
@@ -250,10 +250,11 @@ export default function App() {
                   aria-label={expandedEnergy ? '收起功率趋势' : '展开功率趋势'}
                 >
                   {expandedEnergy ? '收起趋势' : '查看趋势'}
-                  <ChevronDown />
+                  <ChevronDown className={cn('transition-transform duration-(--motion-control) ease-ui', expandedEnergy && 'rotate-180')} />
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-3">
+              <CollapsibleContent className="overflow-hidden data-[state=open]:animate-disclosure-open data-[state=closed]:animate-disclosure-close">
+                <div className="space-y-3 pt-3">
                 <PowerChart history={state.history} compact />
                 <CardDescription className="tabular-nums">
                   本次 {energyText.value} {energyText.unit}
@@ -266,6 +267,7 @@ export default function App() {
                 >
                   查看用电详情
                 </Button>
+                </div>
               </CollapsibleContent>
             </CardContent>
           </Card>
