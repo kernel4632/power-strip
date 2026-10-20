@@ -13,13 +13,15 @@
 
 | 区域 | 官方组件 |
 | --- | --- |
-| 顶栏、床位切换、场景工具 | Button、ToggleGroup、Toggle、Tooltip |
-| 全寝功率、设备与床位标记 | Card、Badge、Button、Collapsible |
+| 顶栏、场景工具 | Button、Toggle、Tooltip |
+| 全寝功率、设备标记 | Card、Badge、Button、Collapsible |
 | 镜头菜单、指南 | Popover、Button、Separator、Kbd |
 | 桌面侧栏、手机底部详情 | Sheet、ScrollArea、Card |
 | 电源、负载、功率占比 | Switch、Label、Slider、Progress |
 | 功率曲线、悬浮读数 | Sparkline（`src/components/ui/sparkline.tsx`，项目内唯一的自绘控件） |
 | 加载、错误与状态说明 | Skeleton、Alert |
+
+界面以场景为主，不显示宣传卡片、顶部生活模式、底部床位导航或床位名称牌。点击家具、能源面板中的床位列表或数字快捷键进入床位。只保留必要的数据名称、单位与操作标签，操作帮助按需打开；不在常驻界面重复显示模拟说明。手机详情面板贴底显示，不为已删除的导航留空。
 
 ## 全局变量
 

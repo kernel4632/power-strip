@@ -27,10 +27,10 @@ export function PowerChart({
       unit="W"
       label={
         device
-          ? '设备模拟功率趋势'
+          ? '设备功率趋势'
           : station
-            ? '床位模拟功率趋势'
-            : '全寝模拟功率趋势'
+            ? '床位功率趋势'
+            : '全寝功率趋势'
       }
     />
   )
