@@ -11,6 +11,10 @@ import { StaticGeometry } from './StaticGeometry'
 const STEEL = '#687a75'
 const WOOD = '#d4b38b'
 const PAPER = '#f2eada'
+// 书桌柜：侧壁黑漆，柜门低饱和蓝，柜内保留浅色以免成了黑洞
+const CABINET_SHELL = '#31383f'
+const CABINET_DOOR = '#4b82b8'
+const CABINET_INNER = '#b4a992'
 const labels = new Map<string, CanvasTexture>()
 function labelTexture(text: string, color: string) {
   const key = text + color
@@ -179,11 +183,13 @@ function DeskStructure({ station }: { station: StationSpec }) {
           size={[1.81, 0.014, 0.022]}
           position={[-0.26, 0.824, 0.325]}
           color="#b89670"
+          surface="wood"
         />
         <Box
           size={[1.81, 0.58, 0.025]}
           position={[-0.26, 0.49, -0.453]}
           color="#cbb99d"
+          surface="wood"
         />
         <mesh
           position={[-0.26, 1.37, -0.512]}
@@ -206,32 +212,63 @@ function DeskStructure({ station }: { station: StationSpec }) {
             key={x}
             size={[0.02, 1.61, 0.76]}
             position={[0.945 + x, 0.905, -0.08]}
-            color="#c7b99c"
+            color={CABINET_SHELL}
+            round={0.006}
+            roughness={0.26}
+            metalness={0.1}
+            surface="lacquer"
           />
         ))}
         <Box
           size={[0.45, 1.61, 0.02]}
           position={[0.945, 0.905, -0.45]}
-          color="#c7b99c"
+          color={CABINET_INNER}
+          roughness={0.62}
+          surface="paint"
         />
         {[0.112, 1.699].map((y) => (
           <Box
             key={y}
             size={[0.49, 0.022, 0.76]}
             position={[0.945, y, -0.08]}
-            color="#c7b99c"
+            color={CABINET_SHELL}
+            round={0.006}
+            roughness={0.26}
+            metalness={0.1}
+            surface="lacquer"
           />
         ))}
         <Box
           size={[0.42, 0.035, 0.69]}
           position={[0.945, 1.151, -0.045]}
           color="#d8cbb0"
+          surface="wood"
         />
         <Box
           size={[0.43, 0.91, 0.025]}
           position={[0.945, 0.62, 0.313]}
-          color="#dcd5be"
+          color={CABINET_DOOR}
+          round={0.005}
+          roughness={0.3}
+          metalness={0.06}
+          surface="paint"
+        />
+        <Box
+          size={[0.43, 0.575, 0.025]}
+          position={[0.945, 1.385, 0.313]}
+          color={CABINET_DOOR}
+          round={0.005}
+          roughness={0.3}
+          metalness={0.06}
+          surface="paint"
+        />
+        <Box
+          size={[0.016, 0.13, 0.022]}
+          position={[0.79, 1.45, 0.339]}
+          color="#8d9a94"
           round={0.004}
+          metalness={0.65}
+          roughness={0.35}
         />
         <Box
           size={[0.016, 0.15, 0.024]}
@@ -696,7 +733,8 @@ function RoomShell({ night }: { night: boolean }) {
             size={[0.599, 0.014, 0.592]}
             position={[-2.46 + x * 0.615, 0.087, -3.05 + z * 0.61]}
             color={(x + z) % 3 === 0 ? '#dfdcd0' : '#e3e0d4'}
-            roughness={0.8}
+            roughness={0.62}
+            surface="plaster"
           />
         )),
       )}

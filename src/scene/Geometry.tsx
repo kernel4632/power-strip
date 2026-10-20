@@ -1,7 +1,7 @@
 import { RoundedBox } from '@react-three/drei'
 import { Quaternion, Vector3 } from 'three'
 import type { Point3 } from '../types'
-import { surfaceTexture } from './materials'
+import { surfaceMaps } from './materials'
 import type { Surface } from './materials'
 
 interface ShapeProps {
@@ -27,7 +27,7 @@ export function Box({
   intensity = 0,
   surface,
 }: ShapeProps & { size: Point3; round?: number }) {
-  const texture = surface ? surfaceTexture(surface) : null
+  const maps = surface ? surfaceMaps(surface) : null
   const material = (
     <meshStandardMaterial
       color={color}
@@ -35,9 +35,12 @@ export function Box({
       metalness={metalness}
       emissive={emissive}
       emissiveIntensity={intensity}
-      map={texture}
-      bumpMap={texture}
-      bumpScale={surface === 'fabric' ? 0.0012 : 0.00015}
+      map={maps?.map}
+      normalMap={maps?.normalMap}
+      normalScale={
+        maps ? [maps.normalScale, maps.normalScale] : undefined
+      }
+      roughnessMap={maps?.roughnessMap}
     />
   )
   return round > 0 ? (

@@ -1,6 +1,8 @@
-import { memo, useEffect, useRef, useState } from 'react'
+import { Suspense, memo, useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, PerformanceMonitor } from '@react-three/drei'
+import { Environment, Lightformer } from '@react-three/drei'
+import hdriUrl from '@/assets/env/brown_studio_1k.hdr?url'
 import {
   Box3,
   Color,
@@ -221,19 +223,27 @@ function RenderBudget() {
   }, [get])
   return null
 }
+/** 场景背景色与二维 UI 共用 index.css 里的 --scene-* 变量。 */
+function sceneColor(token: string, fallback: string) {
+  if (typeof document === 'undefined') return new Color(fallback)
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(token)
+    .trim()
+  return new Color(value || fallback)
+}
 function Lighting({ night }: { night: boolean }) {
   const ambient = useRef<AmbientLight>(null),
-    sun = useRef<DirectionalLight>(null),
-    background = useRef(new Color('#e9e5dc'))
-  const [day] = useState(() => new Color('#e9e5dc')),
-    [dark] = useState(() => new Color('#263338'))
+    sun = useRef<DirectionalLight>(null)
+  const [day] = useState(() => sceneColor('--scene-day', '#e9e5dc')),
+    [dark] = useState(() => sceneColor('--scene-night', '#263338')),
+    background = useRef(day.clone())
   useFrame(({ scene, invalidate }, delta) => {
     const d = 1 - Math.exp(-Math.min(delta, 0.1) * 3)
     if (ambient.current)
       ambient.current.intensity +=
-        ((night ? 0.55 : 1.2) - ambient.current.intensity) * d
+        ((night ? 0.34 : 0.62) - ambient.current.intensity) * d
     if (sun.current)
-      sun.current.intensity += ((night ? 0.7 : 2.8) - sun.current.intensity) * d
+      sun.current.intensity += ((night ? 0.55 : 2.15) - sun.current.intensity) * d
     background.current.lerp(night ? dark : day, d)
     scene.background = background.current
     if (Math.abs(background.current.r - (night ? dark.r : day.r)) > 0.001)
@@ -241,12 +251,12 @@ function Lighting({ night }: { night: boolean }) {
   })
   return (
     <>
-      <ambientLight ref={ambient} intensity={1.2} />
-      <hemisphereLight args={['#e6ede4', '#b5aa93', 0.8]} />
+      <ambientLight ref={ambient} intensity={0.62} />
+      <hemisphereLight args={['#e6ede4', '#b5aa93', 0.38]} />
       <directionalLight
         ref={sun}
         position={[3, 9, 5]}
-        intensity={2.8}
+        intensity={2.15}
         color="#fff1d9"
         castShadow
         shadow-mapSize={[2048, 2048]}
@@ -272,8 +282,46 @@ function Lighting({ night }: { night: boolean }) {
     </>
   )
 }
-function Diagnostics() {
-  const get = useThree((s) => s.get)
+/**
+ * HDRI 环境（Poly Haven / brown_photostudio_02，CC0）。
+ * 黑漆柜体、桌面这类低粗糙度表面靠它拿到真实的高光与反射层次，
+ * 只用点光/平行光时它们会呈现为一片死黑。
+ */
+function StudioEnvironment({ night }: { night: boolean }) {
+  return (
+    <Suspense fallback={<PlaceholderEnvironment intensity={0.32} />}>
+      <Environment
+        files={hdriUrl}
+        environmentIntensity={night ? 0.12 : 0.52}
+        environmentRotation={[0, 0.7, 1.1]}
+      />
+    </Suspense>
+  )
+}
+/** HDRI 解码前先顶上的人造环境，避免首帧发黑。 */
+function PlaceholderEnvironment({ intensity }: { intensity: number }) {
+  return (
+    <Environment resolution={64} frames={1} environmentIntensity={intensity}>
+      <Lightformer
+        form="rect"
+        intensity={1.7}
+        color="#fff6e6"
+        position={[0, 5, 1]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        scale={[8, 5, 1]}
+      />
+      <Lightformer
+        form="rect"
+        intensity={1.3}
+        color="#e6f2f5"
+        position={[-6, 2, -1]}
+        rotation={[0, Math.PI / 2, 0]}
+        scale={[5, 3, 1]}
+      />
+    </Environment>
+  )
+}
+function Diagnostics() {  const get = useThree((s) => s.get)
   useEffect(() => {
     const host = window as unknown as { dormDiagnostics?: () => unknown }
     host.dormDiagnostics = () => {
@@ -382,6 +430,7 @@ export const Scene = memo(function Scene() {
       <Projection />
       <RenderBudget />
       <Lighting night={night} />
+      <StudioEnvironment night={night} />
       <Diagnostics />
       <DormRoom night={night} />
       {DEVICE_CATALOG.map((d) => (
