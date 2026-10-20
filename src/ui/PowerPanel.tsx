@@ -12,6 +12,7 @@ import { usePowerStore } from '../store/usePowerStore'
 import type { DeviceId, StationId } from '../types'
 import { Icon } from './Icon'
 import { PowerChart } from './PowerChart'
+import { Button } from './Button'
 
 export function PowerPanel() {
   const state = usePowerStore(),
@@ -64,14 +65,16 @@ export function PowerPanel() {
             ? `BED ${station.number} / ${spec ? 'DEVICE' : 'POWER STRIP'}`
             : 'ROOM 302 / ENERGY'}
         </span>
-        <button
+        <Button
           ref={close}
+          variant="ghost"
+          size="icon"
           className="icon-button"
           onClick={state.closePanel}
           aria-label="关闭详情面板"
         >
           <Icon name="close" />
-        </button>
+        </Button>
       </div>
       <div className="detail-heading">
         <div className="device-glyph" style={{ color: station?.color }}>
@@ -108,10 +111,10 @@ export function PowerPanel() {
         </p>
       )}
       {spec && (
-        <button className="focus-button" onClick={state.focus}>
+        <Button className="focus-button" onClick={state.focus}>
           <Icon name="focus" size={17} />
           近距离检查模型<span>DETAIL VIEW</span>
-        </button>
+        </Button>
       )}
       <section className="detail-power">
         <span className="field-label">
@@ -278,24 +281,25 @@ export function PowerPanel() {
       {spec && (
         <>
           <p className="device-description">{spec.description}</p>
-          <button
+          <Button
+            variant="ghost"
             className="back-overview"
             onClick={() => state.select(spec.stationId)}
           >
             返回本床位插排 <Icon name="arrow" size={14} />
-          </button>
+          </Button>
         </>
       )}
       {station && !spec && (
         <div className="inspection-buttons">
-          <button
+          <Button
             className="focus-button"
             onClick={() => state.selectStation(station.id)}
           >
             <Icon name="focus" size={17} />
             查看完整床位<span>STATION</span>
-          </button>
-          <button
+          </Button>
+          <Button
             className="focus-button"
             onClick={() => {
               state.inspect('strip')
@@ -304,8 +308,8 @@ export function PowerPanel() {
           >
             <Icon name="bolt" size={17} />
             近看插头与走线<span>WIRING</span>
-          </button>
-          <button
+          </Button>
+          <Button
             className="focus-button"
             onClick={() => {
               state.inspect('bed')
@@ -314,7 +318,7 @@ export function PowerPanel() {
           >
             <Icon name="layers" size={17} />
             近看上铺与护栏<span>LOFT BED</span>
-          </button>
+          </Button>
         </div>
       )}
       {watts > limit && (
@@ -323,9 +327,13 @@ export function PowerPanel() {
         </div>
       )}
       {station && (
-        <button className="back-overview" onClick={() => state.select('room')}>
+        <Button
+          variant="ghost"
+          className="back-overview"
+          onClick={() => state.select('room')}
+        >
           查看全寝总用电 <Icon name="arrow" size={14} />
-        </button>
+        </Button>
       )}
       <p className="panel-disclaimer">
         全部功耗均为模拟值。四个插排各自控制四件设备；仅用于空间交互演示，不作为真实用电安全依据。

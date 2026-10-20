@@ -13,6 +13,7 @@ import {
 } from './data/catalog'
 import { usePowerStore } from './store/usePowerStore'
 import { Icon } from './ui/Icon'
+import { Button } from './ui/Button'
 import { PowerChart } from './ui/PowerChart'
 import { PowerPanel } from './ui/PowerPanel'
 import { Hotspots } from './ui/Hotspots'
@@ -187,7 +188,8 @@ export default function App() {
                 <Icon name={state.night ? 'moon' : 'sun'} size={18} />
               </button>
             </Tip>
-            <button
+            <Button
+              variant="primary"
               className={`energy-entry ${state.selected === 'room' ? 'is-active' : ''}`}
               onClick={() =>
                 state.select(state.selected === 'room' ? null : 'room')
@@ -198,7 +200,7 @@ export default function App() {
               <Icon name="chart" size={17} />
               <span>能源概览</span>
               <Icon name="arrow" size={16} />
-            </button>
+            </Button>
           </div>
         </header>
         <div className="workspace-context">
