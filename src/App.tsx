@@ -7,7 +7,6 @@ import {
   Focus,
   Zap,
   Eye,
-  Layers,
   Info,
   ChevronDown,
   X,
@@ -141,7 +140,6 @@ export default function App() {
       if (e.key === '0') s.setView('overview')
       if (e.key.toLowerCase() === 'f') s.toggleFlow()
       if (e.key.toLowerCase() === 'l') s.toggleNight()
-      if (e.key.toLowerCase() === 'x' && s.activeStation) s.toggleCutaway()
     }
     window.addEventListener('keydown', key)
     return () => {
@@ -394,19 +392,6 @@ export default function App() {
               </TooltipTrigger>
               <TooltipContent>设备标记</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Toggle
-                  disabled={!active}
-                  pressed={!!active && state.cutaway}
-                  onPressedChange={state.toggleCutaway}
-                  aria-label="切换上铺透明检查"
-                >
-                  <Layers />
-                </Toggle>
-              </TooltipTrigger>
-              <TooltipContent>上铺透明检查 · X</TooltipContent>
-            </Tooltip>
             <Popover
               open={menu === 'help'}
               onOpenChange={(open) => setMenu(open ? 'help' : null)}
@@ -454,10 +439,9 @@ export default function App() {
                   <div className="flex justify-between text-sm">
                     <KbdGroup>
                       <Kbd>F</Kbd>
-                      <Kbd>X</Kbd>
                       <Kbd>L</Kbd>
                     </KbdGroup>
-                    <span>能流 / 透视 / 昼夜</span>
+                    <span>能流 / 昼夜</span>
                   </div>
                   <CardDescription>
                     拖动旋转，滚轮缩放。

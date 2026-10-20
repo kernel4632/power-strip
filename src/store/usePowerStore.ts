@@ -53,7 +53,6 @@ interface PowerState {
   setView: (view: CameraView) => void
   focus: () => void
   inspect: (part: 'strip' | 'bed') => void
-  toggleCutaway: () => void
   toggleNight: () => void
   toggleFlow: () => void
   toggleLabels: () => void
@@ -175,7 +174,6 @@ export const usePowerStore = create<PowerState>()((set) => ({
       cameraRevision: state.cameraRevision + 1,
       autoRotate: false,
     })),
-  toggleCutaway: () => set((state) => ({ cutaway: !state.cutaway })),
   toggleNight: () => set((state) => ({ night: !state.night })),
   toggleFlow: () => set((state) => ({ energyFlow: !state.energyFlow })),
   toggleLabels: () => set((state) => ({ labels: !state.labels })),
