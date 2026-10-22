@@ -66,7 +66,12 @@ export function StaticGeometry({
     const inverse = new Matrix4().copy(root.matrixWorld).invert()
     const batches = new Map<
       string,
-      { material: MeshStandardMaterial; geometries: BufferGeometry[] }
+      {
+        material: MeshStandardMaterial
+        geometries: BufferGeometry[]
+        castShadow: boolean
+        receiveShadow: boolean
+      }
     >()
     root.traverse((object) => {
       if (
@@ -85,10 +90,19 @@ export function StaticGeometry({
         material.normalMap?.uuid,
         material.roughnessMap?.uuid,
         material.normalScale.x,
+        material.transparent,
+        material.opacity,
+        material.depthWrite,
+        object.castShadow,
       ].join('|')
       let batch = batches.get(key)
       if (!batch) {
-        batch = { material: material.clone(), geometries: [] }
+        batch = {
+          material: material.clone(),
+          geometries: [],
+          castShadow: object.castShadow,
+          receiveShadow: object.receiveShadow,
+        }
         batches.set(key, batch)
       }
       const geometry = object.geometry.index
@@ -104,7 +118,7 @@ export function StaticGeometry({
       batch.geometries.push(geometry)
     })
     const meshes: Mesh[] = []
-    batches.forEach(({ material, geometries }) => {
+    batches.forEach(({ material, geometries, castShadow, receiveShadow }) => {
       const geometry = mergeGeometries(geometries, false)
       geometries.forEach((item) => item.dispose())
       if (!geometry) {
@@ -113,8 +127,8 @@ export function StaticGeometry({
       }
       geometry.computeBoundingSphere()
       const mesh = new Mesh(geometry, material)
-      mesh.castShadow = true
-      mesh.receiveShadow = true
+      mesh.castShadow = castShadow
+      mesh.receiveShadow = receiveShadow
       mesh.matrixAutoUpdate = false
       target.add(mesh)
       meshes.push(mesh)

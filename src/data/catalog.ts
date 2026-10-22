@@ -227,8 +227,8 @@ export const CAMERA_VIEWS: Record<
   { position: Point3; target: Point3; label: string }
 > = {
   overview: {
-    position: [9.3, 9.7, 12.6],
-    target: [0, 1.1, -0.15],
+    position: [5.8, 3, 7.6],
+    target: [0.15, 1.4, -0.55],
     label: '四人寝全景',
   },
   aisle: {

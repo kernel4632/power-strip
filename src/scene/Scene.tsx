@@ -91,7 +91,7 @@ function CameraRig() {
             : 62
           : state.inspectionPart === 'strip'
             ? 48
-            : 34
+            : 33
       activeCamera.updateProjectionMatrix()
     }
     if (!state.activeStation && size.width < 700)
@@ -229,50 +229,102 @@ function sceneColor(token: string, fallback: string) {
 function Lighting({ night }: { night: boolean }) {
   const ambient = useRef<AmbientLight>(null),
     sun = useRef<DirectionalLight>(null)
-  const [day] = useState(() => sceneColor('--scene-day', '#e9e5dc')),
+  const [day] = useState(() =>
+      sceneColor('--scene-day', '#e9e5dc').multiplyScalar(0.94),
+    ),
     [dark] = useState(() => sceneColor('--scene-night', '#263338')),
     background = useRef(day.clone())
   useFrame(({ scene, invalidate }, delta) => {
     const d = 1 - Math.exp(-Math.min(delta, 0.1) * 3)
+    const instant = matchMedia('(prefers-reduced-motion: reduce)').matches
     if (ambient.current)
-      ambient.current.intensity +=
-        ((night ? 0.34 : 0.62) - ambient.current.intensity) * d
+      ambient.current.intensity = instant
+        ? night
+          ? 0.18
+          : 0.38
+        : ambient.current.intensity +
+          ((night ? 0.18 : 0.38) - ambient.current.intensity) * d
     if (sun.current)
-      sun.current.intensity += ((night ? 0.55 : 2.15) - sun.current.intensity) * d
-    background.current.lerp(night ? dark : day, d)
+      sun.current.intensity = instant
+        ? night
+          ? 0.25
+          : 3.1
+        : sun.current.intensity +
+          ((night ? 0.25 : 3.1) - sun.current.intensity) * d
+    if (instant) background.current.copy(night ? dark : day)
+    else background.current.lerp(night ? dark : day, d)
     scene.background = background.current
     if (Math.abs(background.current.r - (night ? dark.r : day.r)) > 0.001)
       invalidate()
   })
   return (
     <>
-      <ambientLight ref={ambient} intensity={0.62} />
-      <hemisphereLight args={['#e6ede4', '#b5aa93', 0.38]} />
+      <ambientLight ref={ambient} intensity={0.38} />
+      <hemisphereLight args={['#e8e0cf', '#8d7b62', 0.32]} />
       <directionalLight
         ref={sun}
-        position={[3, 9, 5]}
-        intensity={2.15}
-        color="#fff1d9"
+        position={[6.5, 2.6, -8.5]}
+        intensity={3.4}
+        color="#ffcf95"
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-7}
-        shadow-camera-right={7}
-        shadow-camera-top={7}
-        shadow-camera-bottom={-7}
-        shadow-camera-far={25}
+        shadow-camera-left={-8}
+        shadow-camera-right={8}
+        shadow-camera-top={8}
+        shadow-camera-bottom={-8}
+        shadow-camera-near={0.5}
+        shadow-camera-far={40}
         shadow-normalBias={0.018}
         shadow-bias={-0.0001}
       />
       <directionalLight
-        position={[-3, 4, -2]}
-        color="#d2e8e7"
-        intensity={0.5}
+        position={[-5.5, 3.2, 5.5]}
+        color="#a9c4ce"
+        intensity={0.55}
+      />
+      <directionalLight
+        position={[6, 3, -8]}
+        color="#ffd7a3"
+        intensity={1.05}
       />
       <pointLight
-        position={[0, 2.8, -2.8]}
-        color="#ffe0ad"
-        intensity={night ? 1.5 : 0.1}
-        distance={6}
+        position={[0.2, 1.25, 0.4]}
+        color="#ffd9b0"
+        intensity={night ? 0.35 : 0.85}
+        distance={4.6}
+        decay={2}
+      />
+      {[-1.92, 1.92].flatMap((x) =>
+        [-1.45, 1.3].map((z) => (
+          <pointLight
+            key={`${x}-${z}`}
+            position={[x, 1.22, z]}
+            color="#ffd6a6"
+            intensity={night ? 0.25 : 4.2}
+            distance={2.9}
+            decay={2}
+          />
+        )),
+      )}
+      <pointLight
+        position={[1.35, 0.85, 1.9]}
+        color="#ffcf9a"
+        intensity={night ? 0.3 : 7.5}
+        distance={3.4}
+        decay={2}
+      />
+      <pointLight
+        position={[0, 1.45, 1.35]}
+        color="#ffd2a0"
+        intensity={night ? 0.4 : 2.2}
+        distance={4.2}
+        decay={2}
+      />
+      <pointLight
+        position={[0, 2.7, -2.6]}
+        color="#ffd9a6"
+        intensity={night ? 1.2 : 0.12}
+        distance={5}
       />
     </>
   )
@@ -316,7 +368,8 @@ function PlaceholderEnvironment({ intensity }: { intensity: number }) {
     </Environment>
   )
 }
-function Diagnostics() {  const get = useThree((s) => s.get)
+function Diagnostics() {
+  const get = useThree((s) => s.get)
   useEffect(() => {
     const host = window as unknown as { dormDiagnostics?: () => unknown }
     host.dormDiagnostics = () => {
@@ -400,7 +453,7 @@ export const Scene = memo(function Scene() {
       frameloop="demand"
       shadows={{ type: PCFShadowMap }}
       dpr={dpr}
-      camera={{ position: [9.3, 9.7, 12.6], fov: 34, near: 0.05, far: 100 }}
+      camera={{ position: [5.8, 3, 7.6], fov: 33, near: 0.05, far: 100 }}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
       onPointerMissed={(e) => {
         if (e.type === 'click') usePowerStore.getState().closePanel()

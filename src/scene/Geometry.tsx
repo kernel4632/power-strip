@@ -13,6 +13,8 @@ interface ShapeProps {
   emissive?: string
   intensity?: number
   surface?: Surface
+  castShadow?: boolean
+  receiveShadow?: boolean
 }
 
 export function Box({
@@ -26,6 +28,8 @@ export function Box({
   emissive = '#000000',
   intensity = 0,
   surface,
+  castShadow = true,
+  receiveShadow = true,
 }: ShapeProps & { size: Point3; round?: number }) {
   const maps = surface ? surfaceMaps(surface) : null
   const material = (
@@ -37,9 +41,7 @@ export function Box({
       emissiveIntensity={intensity}
       map={maps?.map}
       normalMap={maps?.normalMap}
-      normalScale={
-        maps ? [maps.normalScale, maps.normalScale] : undefined
-      }
+      normalScale={maps ? [maps.normalScale, maps.normalScale] : undefined}
       roughnessMap={maps?.roughnessMap}
     />
   )
@@ -50,13 +52,18 @@ export function Box({
       smoothness={2}
       position={position}
       rotation={rotation}
-      castShadow
-      receiveShadow
+      castShadow={castShadow}
+      receiveShadow={receiveShadow}
     >
       {material}
     </RoundedBox>
   ) : (
-    <mesh position={position} rotation={rotation} castShadow receiveShadow>
+    <mesh
+      position={position}
+      rotation={rotation}
+      castShadow={castShadow}
+      receiveShadow={receiveShadow}
+    >
       <boxGeometry args={size} />
       {material}
     </mesh>
