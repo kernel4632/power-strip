@@ -3,6 +3,7 @@
  *
  * 来源：排插数据(2).xlsx，共 12 款，价格单位为元。
  * 原始表里 E2 写作「28.9rm」，按 28.9 元处理；尺寸分隔符已统一成「×」。
+ * 该文件由 scripts/gen-measured.py 从原始 xlsx 直接生成，请勿手改数值。
  */
 export type StripSpec = {
   name: string
