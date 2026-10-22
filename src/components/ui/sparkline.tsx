@@ -35,7 +35,7 @@ export function Sparkline({
           className,
         )}
       >
-        等待首次采样…
+        无记录
       </div>
     )
 
@@ -140,7 +140,6 @@ export function Sparkline({
                   x2="100"
                   y2={offset}
                   className="stroke-border"
-                  strokeDasharray="2 3"
                   strokeWidth={1}
                   vectorEffect="non-scaling-stroke"
                 />
@@ -170,7 +169,7 @@ export function Sparkline({
           {activePoint && !compact && (
             <div
               className={cn(
-                'pointer-events-none absolute top-0 whitespace-nowrap rounded-md border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-sm',
+                'pointer-events-none absolute top-0 whitespace-nowrap border border-border bg-popover px-2 py-1 font-mono text-xs text-popover-foreground',
                 activeOffset < 15
                   ? 'translate-x-0'
                   : activeOffset > 85
@@ -203,7 +202,7 @@ export function Sparkline({
         <div>
           <div className="flex items-center justify-between gap-2 text-xs tabular-nums">
             <span className="text-muted-foreground">{reading.label}</span>
-            <output className="font-mono text-primary">
+            <output className="font-mono tabular-nums">
               {formatPower(reading.value)} {unit}
             </output>
           </div>

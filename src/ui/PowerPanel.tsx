@@ -20,7 +20,6 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
@@ -77,22 +76,18 @@ export function PowerPanel() {
       ? '本床位插排已关闭'
       : null
   const deviceRows = (
-    <div className="divide-y divide-border">
+    <div className="divide-y divide-rule border-t border-rule">
       {devices.map((d) => (
         <Button
           key={d.id}
           variant="ghost"
-          className="h-auto min-h-12 w-full justify-between rounded-none px-0 py-2 text-left"
+          className="h-11 w-full justify-between gap-3 rounded-none px-0 text-left font-normal hover:bg-transparent"
           onClick={() => state.select(d.id)}
         >
-          <span className="flex items-center gap-3">
-            <span className="font-mono text-xs text-muted-foreground">
-              {d.socket + 1}
-            </span>
-            {d.name}
-          </span>
-          <span className="flex items-center gap-2 font-mono text-xs">
-            {formatPower(state.devices[d.id].watts)} W
+          <span className="truncate">{d.name}</span>
+          <span className="flex shrink-0 items-baseline gap-1.5 font-mono text-xs tabular-nums text-muted-foreground">
+            {formatPower(state.devices[d.id].watts)}
+            <span className="text-xs">W</span>
             <ArrowUpRight className="size-3" />
           </span>
         </Button>
@@ -111,20 +106,20 @@ export function PowerPanel() {
         side={isMobile ? 'bottom' : 'right'}
         showCloseButton={false}
         className={cn(
-          'gap-0 overflow-hidden',
+          'gap-0 overflow-hidden rounded-none border-border bg-card',
           isMobile
             ? state.panelExpanded
-              ? 'h-3/4 rounded-t-xl'
-              : 'h-1/2 rounded-t-xl'
-            : 'bottom-3 right-3 top-16 h-auto w-88 rounded-xl border sm:max-w-88',
+              ? 'h-3/4'
+              : 'h-1/2'
+            : 'bottom-0 right-0 top-14 h-auto w-88 border-l sm:max-w-88',
         )}
         onInteractOutside={(event) => event.preventDefault()}
         aria-label="床位与设备详情"
       >
-        <div className="flex min-h-14 shrink-0 items-center justify-between gap-2 border-b px-4">
+        <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-rule px-4">
           <div className="min-w-0">
-            <SheetTitle className="truncate text-base">
-              {spec?.name ?? (station ? `${station.name} · 插排` : '全寝用电')}
+            <SheetTitle className="truncate text-sm font-semibold">
+              {spec?.name ?? (station ? `${station.name}插排` : '全寝用电')}
             </SheetTitle>
             <SheetDescription className="sr-only">
               设备控制与采集记录
@@ -163,7 +158,7 @@ export function PowerPanel() {
         </div>
         {hasRecords && (
           <div
-            className="flex shrink-0 gap-5 border-b px-4"
+            className="flex shrink-0 gap-5 border-b border-rule px-4"
             aria-label="详情内容"
           >
             {(['control', 'record'] as const).map((value) => (
@@ -172,17 +167,17 @@ export function PowerPanel() {
                 variant="ghost"
                 aria-pressed={view === value}
                 className={cn(
-                  'rounded-none border-b-2 border-transparent px-0 text-xs',
+                  'h-10 rounded-none border-b-2 px-0 text-xs font-normal hover:bg-transparent',
                   view === value
-                    ? 'border-primary text-primary'
-                    : 'text-muted-foreground',
+                    ? 'border-foreground text-foreground'
+                    : 'border-transparent text-muted-foreground',
                 )}
                 onClick={() => {
                   setView(value)
                   if (isMobile) state.setPanelExpanded(value === 'record')
                 }}
               >
-                {value === 'control' ? '当前模拟' : '24 小时记录'}
+                {value === 'control' ? '当前' : '记录'}
               </Button>
             ))}
           </div>
@@ -191,13 +186,13 @@ export function PowerPanel() {
           <div className="space-y-5 p-4">
             {view === 'control' || !hasRecords ? (
               <>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="flex items-baseline gap-2 font-mono text-3xl text-primary">
-                      {formatPower(watts)}
-                      <span className="text-sm text-muted-foreground">W</span>
-                    </p>
-                  </div>
+                <div className="flex items-end justify-between gap-4">
+                  <p className="flex items-baseline gap-1.5 font-mono text-4xl tracking-tight tabular-nums">
+                    {formatPower(watts)}
+                    <span className="text-sm tracking-normal text-muted-foreground">
+                      W
+                    </span>
+                  </p>
                   <div className="flex flex-col items-center gap-1">
                     <Switch
                       id="power-switch"
@@ -214,21 +209,18 @@ export function PowerPanel() {
                             : state.setMaster(checked)
                       }
                     />
-                    <Label
-                      htmlFor="power-switch"
-                      className="sr-only"
-                    >
+                    <Label htmlFor="power-switch" className="sr-only">
                       {active ? '电源开启' : '电源关闭'}
                     </Label>
                   </div>
                 </div>
                 {spec && device && (
                   <div>
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-baseline justify-between gap-3 text-xs">
                       <Label id="device-level-label" className="text-xs">
                         {levelLabel}
                       </Label>
-                      <span className="font-mono">
+                      <span className="font-mono tabular-nums text-muted-foreground">
                         {Math.round(device.level * 100)}%
                       </span>
                     </div>
@@ -252,8 +244,8 @@ export function PowerPanel() {
                 )}
                 {spec && (
                   <Button
-                    variant="outline"
-                    className="w-full justify-between"
+                    variant="ghost"
+                    className="h-11 w-full justify-between rounded-none border-y border-rule px-0 font-normal hover:bg-transparent"
                     onClick={state.focus}
                   >
                     近看设备
@@ -261,95 +253,89 @@ export function PowerPanel() {
                   </Button>
                 )}
                 {!spec && station && (
-                  <section aria-label="此床位设备">
-                    {deviceRows}
-                  </section>
+                  <section aria-label="此床位设备">{deviceRows}</section>
                 )}
                 {!station && (
-                  <section
-                    aria-label="四个床位"
-                    className="divide-y divide-border"
-                  >
-                    {STATIONS.map((s) => (
-                      <Button
-                        key={s.id}
-                        variant="ghost"
-                        className="h-12 w-full justify-between rounded-none px-0"
-                        onClick={() => state.selectStation(s.id)}
-                      >
-                        <span className="flex gap-3">
-                          <span className="font-mono text-muted-foreground">
-                            {String(s.number).padStart(2, '0')}
+                  <section aria-label="四个床位">
+                    <div className="divide-y divide-rule border-t border-rule">
+                      {STATIONS.map((s) => (
+                        <Button
+                          key={s.id}
+                          variant="ghost"
+                          className="h-11 w-full justify-between gap-3 rounded-none px-0 font-normal hover:bg-transparent"
+                          onClick={() => state.selectStation(s.id)}
+                        >
+                          <span>{s.name}</span>
+                          <span className="flex shrink-0 items-baseline gap-1.5 font-mono text-xs tabular-nums text-muted-foreground">
+                            {formatPower(
+                              stationDevices(s.id).reduce(
+                                (n, d) => n + state.devices[d.id].watts,
+                                0,
+                              ),
+                            )}
+                            <span className="text-xs">W</span>
                           </span>
-                          {s.name}
-                        </span>
-                        <span className="font-mono text-xs">
-                          {formatPower(
-                            stationDevices(s.id).reduce(
-                              (n, d) => n + state.devices[d.id].watts,
-                              0,
-                            ),
-                          )}{' '}
-                          W
-                        </span>
-                      </Button>
-                    ))}
+                        </Button>
+                      ))}
+                    </div>
                   </section>
                 )}
-                <Separator />
-                <section className="space-y-3">
-                  <h3 className="text-sm font-medium">功率趋势</h3>
+                <section className="space-y-1">
+                  <h3 className="text-xs text-muted-foreground">功率趋势</h3>
                   <PowerChart
                     history={state.history}
                     device={spec?.id}
                     station={station?.id}
                   />
                 </section>
-                <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                <div className="grid grid-cols-2 gap-4 border-t border-rule pt-4">
                   <div>
                     <p className="text-xs text-muted-foreground">本次用电</p>
-                    <p className="mt-1 font-mono text-sm">
+                    <p className="mt-1 font-mono text-sm tabular-nums">
                       {energy.value} {energy.unit}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">电流</p>
-                    <p className="mt-1 font-mono text-sm">
+                    <p className="mt-1 font-mono text-sm tabular-nums">
                       {(watts / VOLTAGE).toFixed(2)} A
                     </p>
                   </div>
                 </div>
                 {station && !spec && (
-                  <div className="grid gap-2">
+                  <div className="flex flex-col divide-y divide-rule border-t border-rule">
                     <Button
-                      variant="outline"
+                      variant="ghost"
+                      className="h-11 justify-between rounded-none px-0 font-normal hover:bg-transparent"
                       onClick={() => state.selectStation(station.id)}
                     >
+                      完整床位
                       <Focus />
-                      查看完整床位
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
+                      className="h-11 justify-between rounded-none px-0 font-normal hover:bg-transparent"
                       onClick={() => {
                         state.inspect('strip')
                         state.closePanel()
                       }}
                     >
+                      插头与走线
                       <Zap />
-                      近看插头与走线
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
+                      className="h-11 justify-between rounded-none px-0 font-normal hover:bg-transparent"
                       onClick={() => {
                         state.inspect('bed')
                         state.closePanel()
                       }}
                     >
+                      上铺与护栏
                       <Layers />
-                      近看上铺与护栏
                     </Button>
                     {watts > station.limit && (
-                      <p role="alert" className="text-sm text-destructive">
+                      <p role="alert" className="py-3 text-xs text-destructive">
                         负载超过插排参考上限。
                       </p>
                     )}
@@ -362,10 +348,10 @@ export function PowerPanel() {
             {station && (
               <Button
                 variant="ghost"
-                className="w-full justify-between border-t"
+                className="h-11 w-full justify-between rounded-none border-t border-rule px-0 font-normal text-muted-foreground hover:bg-transparent"
                 onClick={() => state.select('room')}
               >
-                查看全寝用电
+                全寝
                 <ArrowUpRight />
               </Button>
             )}

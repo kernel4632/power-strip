@@ -1,5 +1,6 @@
 import { Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { formatPower } from '@/lib/format'
 import { HotspotLine } from '@/components/ui/hotspot-line'
 import { DEVICE_CATALOG, STATIONS } from '../data/catalog'
@@ -32,8 +33,13 @@ export function Hotspots() {
               state.inspectionPart === 'bed'
             }
             size="icon"
-            variant={state.selected === s.id ? 'default' : 'outline'}
-            className="pointer-events-auto rounded-sm"
+            variant="ghost"
+            className={cn(
+              'pointer-events-auto rounded-none border border-border border-b-2 bg-card text-card-foreground hover:bg-card',
+              state.selected === s.id
+                ? 'border-b-foreground'
+                : 'border-b-transparent',
+            )}
             aria-label={`查看${s.name}插排`}
             title={`${s.name}插排`}
             onClick={() => state.select(s.id)}
@@ -52,15 +58,20 @@ export function Hotspots() {
               state.inspectionPart === 'bed' ||
               state.inspectionPart === 'strip'
             }
-            variant={state.selected === d.id ? 'default' : 'outline'}
-            className="pointer-events-auto h-11 min-w-11 gap-2 rounded-sm px-3 text-xs"
+            variant="ghost"
+            className={cn(
+              'pointer-events-auto h-11 min-w-11 gap-2 rounded-none border border-border border-b-2 bg-card px-2.5 text-xs text-card-foreground hover:bg-card',
+              state.selected === d.id
+                ? 'border-b-foreground'
+                : 'border-b-transparent',
+            )}
             aria-label={`查看${STATIONS.find((s) => s.id === d.stationId)!.name}${d.name}`}
             aria-pressed={state.selected === d.id}
             title={`${d.name} · ${formatPower(state.devices[d.id].watts)} W`}
             onClick={() => state.select(d.id)}
           >
             <span>{d.name}</span>
-            <span className="font-mono">
+            <span className="font-mono tabular-nums text-muted-foreground">
               {formatPower(state.devices[d.id].watts)} W
             </span>
           </Button>

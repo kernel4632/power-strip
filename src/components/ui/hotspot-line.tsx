@@ -4,7 +4,7 @@ export function HotspotLine({ id }: { id: string }) {
     <svg
       id={`line-${id}`}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 size-full overflow-visible text-primary/60"
+      className="pointer-events-none absolute inset-0 size-full overflow-visible text-muted-foreground/70"
     >
       <line stroke="currentColor" strokeWidth="1" />
       <circle r="2.5" fill="currentColor" />

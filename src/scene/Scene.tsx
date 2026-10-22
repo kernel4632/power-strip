@@ -98,7 +98,7 @@ function CameraRig() {
     if (!state.activeStation && size.width < 700)
       goal.current.position
         .sub(goal.current.target)
-        .multiplyScalar(Math.max(1.1, 0.9 / (size.width / size.height)))
+        .multiplyScalar(Math.max(1.2, 0.69 / (size.width / size.height)))
         .add(goal.current.target)
     goal.current.moving = true
     if (

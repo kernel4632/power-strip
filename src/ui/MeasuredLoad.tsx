@@ -1,13 +1,5 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { Sparkline } from '@/components/ui/sparkline'
 import { MEASURED_MAP, MEASURED_TIMES } from '../data/measured'
 import {
@@ -40,52 +32,59 @@ export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
   }))
   const energy = (group.energyWh / divisor / 1000).toFixed(4)
   return (
-    <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
+    <div className="space-y-5">
       {!device && (
-        <CardHeader className="px-2">
-          <CardTitle>{group.name}</CardTitle>
-        </CardHeader>
+        <p className="text-sm font-medium">{group.name}</p>
       )}
-      <CardContent className="space-y-4 px-2">
-        <Sparkline data={data} unit="W" label="24 小时功率记录" />
-        <div className="grid grid-cols-3 gap-2">
-          <div className="space-y-1">
-            <CardDescription>平均</CardDescription>
-            <div className="font-mono text-sm">
-              {formatPower(group.avgW / divisor)} W
-            </div>
-          </div>
-          <div className="space-y-1">
-            <CardDescription>峰值</CardDescription>
-            <div className="font-mono text-sm">
-              {formatPower(group.peakW / divisor)} W
-            </div>
-          </div>
-          <div className="space-y-1">
-            <CardDescription>日耗电</CardDescription>
-            <div className="text-sm tabular-nums">{energy} kWh</div>
-          </div>
+      <Sparkline data={data} unit="W" label="24 小时功率记录" />
+      <div className="grid grid-cols-3 gap-3 border-y border-rule py-3">
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">平均</p>
+          <p className="font-mono text-sm tabular-nums">
+            {formatPower(group.avgW / divisor)}
+            <span className="ml-1 text-xs text-muted-foreground">W</span>
+          </p>
         </div>
-        <DataSource groupId={group.id} device={device} />
-        {!device && <Separator />}
-        {!device && (
-          <div className="space-y-1">
-            {BY_AVERAGE.map((item) => (
-              <Button
-                key={item.id}
-                variant={active === item.id ? 'secondary' : 'ghost'}
-                className="h-auto w-full justify-between gap-2 py-2"
-                onClick={() => setActive(item.id)}
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">峰值</p>
+          <p className="font-mono text-sm tabular-nums">
+            {formatPower(group.peakW / divisor)}
+            <span className="ml-1 text-xs text-muted-foreground">W</span>
+          </p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">日耗电</p>
+          <p className="font-mono text-sm tabular-nums">
+            {energy}
+            <span className="ml-1 text-xs text-muted-foreground">kWh</span>
+          </p>
+        </div>
+      </div>
+      <DataSource groupId={group.id} device={device} />
+      {!device && (
+        <div className="divide-y divide-rule border-t border-rule">
+          {BY_AVERAGE.map((item) => (
+            <Button
+              key={item.id}
+              variant="ghost"
+              className="h-11 w-full justify-between gap-3 rounded-none px-0 font-normal hover:bg-transparent"
+              aria-pressed={active === item.id}
+              onClick={() => setActive(item.id)}
+            >
+              <span
+                className={
+                  active === item.id ? 'truncate' : 'truncate text-muted-foreground'
+                }
               >
-                <span className="truncate">{item.name}</span>
-                <span className="shrink-0 text-xs tabular-nums">
-                  {formatPower(item.avgW)} W
-                </span>
-              </Button>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                {item.name}
+              </span>
+              <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                {formatPower(item.avgW)} W
+              </span>
+            </Button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
