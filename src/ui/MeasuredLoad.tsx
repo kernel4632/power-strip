@@ -18,14 +18,15 @@ import {
   MEASURED_TOTAL,
 } from '../data/measured'
 import { formatEnergy } from '../lib/format'
+import { measuredLabel } from '../lib/measuredTime'
 
 const RANKED = [...MEASURED_GROUPS].sort((a, b) => b.share - a.share)
 
 /**
- * 实测 24 小时负荷。数据来自宿舍 10 分钟粒度的功率记录，
- * 与场景里的实时模拟是两套东西：这里读的是记录，不随开关变化。
+ * 实测 24 小时负荷。曲线固定为记录值，不随开关变化；
+ * 设备实际取的是「当前时刻」那一格的读数。
  */
-export function MeasuredLoad() {
+export function MeasuredLoad({ index }: { index: number }) {
   const [active, setActive] = useState<string>('total')
   const group =
     active === 'total'
@@ -44,7 +45,9 @@ export function MeasuredLoad() {
       <CardHeader className="gap-2 px-2">
         <div className="flex items-center justify-between gap-2">
           <CardTitle>实测 24 小时负荷</CardTitle>
-          <Badge variant="secondary">10 分钟 × 144</Badge>
+          <Badge variant="secondary">
+            {measuredLabel(index)} · 10 分钟
+          </Badge>
         </div>
         {group && <CardDescription>{group.name}</CardDescription>}
       </CardHeader>

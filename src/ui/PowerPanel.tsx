@@ -36,7 +36,6 @@ import {
 } from '../data/catalog'
 import { usePowerStore } from '../store/usePowerStore'
 import type { DeviceId, StationId } from '../types'
-import { MEASURED_MAP } from '../data/measured'
 import { MeasuredLoad } from './MeasuredLoad'
 import { PowerChart } from './PowerChart'
 import { StripSpecs } from './StripSpecs'
@@ -55,12 +54,16 @@ export function PowerPanel() {
       : null
   const devices = station ? stationDevices(station.id) : DEVICE_CATALOG
   const device = spec ? state.devices[spec.id] : null
-  const watts = device
+  // 全寝口径要含场景外的空调、洗衣机等，否则与实测对不上
+  const roomScope = !device && !station
+  const sceneWatts = device
     ? device.watts
     : devices.reduce((sum, d) => sum + state.devices[d.id].watts, 0)
-  const energy = device
+  const watts = roomScope ? sceneWatts + state.outsideWatts : sceneWatts
+  const sceneEnergy = device
     ? device.energyWh
     : devices.reduce((sum, d) => sum + state.devices[d.id].energyWh, 0)
+  const energy = roomScope ? sceneEnergy + state.outsideEnergyWh : sceneEnergy
   const limit = spec?.ratedWatts ?? station?.limit ?? CIRCUIT_LIMIT
   const active =
     state.masterOn &&
@@ -79,9 +82,6 @@ export function PowerPanel() {
         : '负载'
   const level = loadLevel(watts, limit)
   const energyText = formatEnergy(energy)
-  const measuredGroup = spec?.measuredGroup
-    ? MEASURED_MAP[spec.measuredGroup]
-    : null
   return (
     <Sheet
       open={open}
@@ -137,7 +137,12 @@ export function PowerPanel() {
                   {station?.name} · 插孔 {spec.socket + 1}
                 </Badge>
               )}
-              {measuredGroup && <Badge variant="outline">实测功率</Badge>}
+              {device?.powerSource === 'measured' && (
+                <Badge variant="outline">实测</Badge>
+              )}
+              {device?.powerSource === 'typical' && (
+                <Badge variant="outline">实测均值</Badge>
+              )}
             </div>
             {spec && (
               <Button
@@ -245,7 +250,7 @@ export function PowerPanel() {
                 />
               </CardContent>
             </Card>
-            {!spec && !station && <MeasuredLoad />}
+            {!spec && !station && <MeasuredLoad index={state.measuredIndex} />}
             <Separator />
             <div className="grid grid-cols-2 gap-4">
               <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
@@ -314,6 +319,12 @@ export function PowerPanel() {
                       </span>
                     </Button>
                   ))}
+                  <div className="flex items-center justify-between px-3 py-3 text-sm text-muted-foreground">
+                    <span>场景外设备</span>
+                    <span className="text-xs tabular-nums">
+                      {state.outsideWatts.toFixed(0)} W
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
             )}

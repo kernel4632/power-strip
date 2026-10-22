@@ -1,5 +1,12 @@
 import { create } from 'zustand'
-import { DEVICE_CATALOG, DEVICE_MAP, STATIONS } from '../data/catalog'
+import {
+  DEVICE_CATALOG,
+  DEVICE_MAP,
+  STATIONS,
+  deviceReading,
+  measuredOnlyWatts,
+} from '../data/catalog'
+import { measuredIndex as intervalAt } from '../lib/measuredTime'
 import type {
   CameraView,
   DeviceId,
@@ -11,17 +18,25 @@ import type {
   StationId,
 } from '../types'
 
+/** 页面打开时所处的实测区间，用作设备功率的初值。 */
+const BOOT_AT = new Date()
+const BOOT_INDEX = intervalAt(BOOT_AT)
+
 function initialDevices(): Record<DeviceId, DeviceState> {
   return Object.fromEntries(
-    DEVICE_CATALOG.map((d) => [
-      d.id,
-      {
-        on: d.defaultOn,
-        level: 1,
-        watts: d.defaultOn ? d.ratedWatts : d.standbyWatts,
-        energyWh: 0,
-      },
-    ]),
+    DEVICE_CATALOG.map((d) => {
+      const reading = deviceReading(d, BOOT_AT)
+      return [
+        d.id,
+        {
+          on: d.defaultOn,
+          level: 1,
+          watts: d.defaultOn ? reading.watts : d.standbyWatts,
+          energyWh: 0,
+          powerSource: reading.source,
+        },
+      ]
+    }),
   ) as Record<DeviceId, DeviceState>
 }
 interface PowerState {
@@ -33,6 +48,12 @@ interface PowerState {
   history: PowerSample[]
   sessionSeconds: number
   masterOn: boolean
+  /** 当前所处的实测十分钟区间序号 */
+  measuredIndex: number
+  /** 场景外设备在该区间的实测合计功率 */
+  outsideWatts: number
+  /** 场景外设备在本次会话内的累计电量 */
+  outsideEnergyWh: number
   mode: SceneMode
   night: boolean
   energyFlow: boolean
@@ -68,6 +89,9 @@ export const usePowerStore = create<PowerState>()((set) => ({
   history: [],
   sessionSeconds: 0,
   masterOn: true,
+  measuredIndex: BOOT_INDEX,
+  outsideWatts: measuredOnlyWatts(BOOT_AT),
+  outsideEnergyWh: 0,
   mode: 'study',
   night: false,
   energyFlow: false,
@@ -185,20 +209,22 @@ export const usePowerStore = create<PowerState>()((set) => ({
         5,
       )
       const elapsed = state.sessionSeconds + dt
+      const at = new Date(now)
+      const index = intervalAt(at)
       const devices = { ...state.devices }
       const readings = {} as Record<DeviceId, number>
       const stations = Object.fromEntries(
         STATIONS.map((s) => [s.id, 0]),
       ) as Record<StationId, number>
-      let total = 0
-      DEVICE_CATALOG.forEach((spec, index) => {
+      let scene = 0
+      DEVICE_CATALOG.forEach((spec) => {
         const device = state.devices[spec.id]
         const powered = state.masterOn && state.strips[spec.stationId]
-        const wave = 0.97 + 0.03 * Math.sin(elapsed * 0.7 + index * 2)
+        const reading = deviceReading(spec, at)
         const target = !powered
           ? 0
           : device.on
-            ? spec.ratedWatts * device.level * wave
+            ? reading.watts * device.level
             : spec.standbyWatts
         const watts =
           !powered || !device.on
@@ -207,19 +233,31 @@ export const usePowerStore = create<PowerState>()((set) => ({
         devices[spec.id] = {
           ...device,
           watts,
+          powerSource: reading.source,
           energyWh:
             device.energyWh + (((device.watts + watts) / 2) * dt) / 3600,
         }
         readings[spec.id] = watts
         stations[spec.stationId] += watts
-        total += watts
+        scene += watts
       })
+      const outside = measuredOnlyWatts(at)
       return {
         devices,
+        measuredIndex: index,
+        outsideWatts: outside,
+        outsideEnergyWh:
+          state.outsideEnergyWh + (((state.outsideWatts + outside) / 2) * dt) / 3600,
         sessionSeconds: elapsed,
         history: [
           ...state.history,
-          { time: now, total, devices: readings, stations },
+          {
+            time: now,
+            total: scene + outside,
+            devices: readings,
+            stations,
+            outside,
+          },
         ].slice(-90),
       }
     }),

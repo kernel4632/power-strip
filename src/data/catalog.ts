@@ -4,6 +4,7 @@ import type {
   DeviceKind,
   DeviceSpec,
   Point3,
+  PowerSource,
   SceneMode,
   StationId,
   StationSpec,
@@ -98,6 +99,78 @@ const measuredKinds: Partial<
   laptop: { group: 'macbook', units: 2 },
   tower: { group: 'gaming', units: 2 },
   lamp: { group: 'lamp', units: 4 },
+}
+/**
+ * 实测表里有记录、但场景里没有建模的设备。
+ * 它们的负荷照样计入全寝合计，否则全寝数字对不上实测。
+ */
+export const MEASURED_ONLY_GROUPS = [
+  'ac',
+  'washer',
+  'dryer',
+  'kettle',
+  'cooker',
+  'led',
+] as const
+
+/** 场景外设备在指定时刻的合计功率。 */
+export function measuredOnlyWatts(at: Date): number {
+  const position = intervalPosition(at)
+  return MEASURED_ONLY_GROUPS.reduce(
+    (sum, id) => sum + sample(MEASURED_MAP[id]?.series, position),
+    0,
+  )
+}
+
+/**
+ * 实测是按十分钟一格记的，直接在格与格之间跳会画出直角阶梯。
+ * 这里按当前时刻在格内的进度做线性过渡，曲线连续，读数仍然出自实测。
+ */
+function intervalPosition(at: Date): number {
+  const minutes =
+    at.getHours() * 60 + at.getMinutes() + at.getSeconds() / 60
+  return Math.min(143, minutes / 10)
+}
+
+function sample(series: number[] | undefined, position: number): number {
+  if (!series || series.length === 0) return 0
+  const low = Math.min(Math.floor(position), series.length - 1)
+  const high = Math.min(low + 1, series.length - 1)
+  const t = position - low
+  const a = series[low] ?? 0
+  const b = series[high] ?? a
+  return a + (b - a) * t
+}
+
+/** 单台设备在指定时刻的功率；没有实测映射时返回 null。 */
+export function measuredWatts(
+  group: string | undefined,
+  units: number | undefined,
+  at: Date,
+): number | null {
+  if (!group || !units) return null
+  const series = MEASURED_MAP[group]?.series
+  if (!series) return null
+  return sample(series, intervalPosition(at)) / units
+}
+
+/**
+ * 设备在指定时刻该显示多少瓦。
+ * 优先用该时刻的实测读数；实测为 0（那一刻没用电）时退回该组平均值，
+ * 避免设备明明开着却显示 0 W；没有实测映射的设备用示意值。
+ */
+export function deviceReading(
+  spec: DeviceSpec,
+  at: Date,
+): { watts: number; source: PowerSource } {
+  const measured = measuredWatts(spec.measuredGroup, spec.measuredUnits, at)
+  if (measured !== null && measured > 0.05) {
+    return { watts: measured, source: 'measured' }
+  }
+  if (spec.typicalWatts !== undefined) {
+    return { watts: spec.typicalWatts, source: 'typical' }
+  }
+  return { watts: spec.ratedWatts, source: 'nominal' }
 }
 type Placement = {
   kind: DeviceKind
@@ -210,6 +283,9 @@ export const DEVICE_CATALOG: DeviceSpec[] = STATIONS.flatMap((station) =>
     const ratedWatts = group
       ? Math.round((group.peakW / mapping!.units) * 10) / 10
       : fallbackRated
+    const typicalWatts = group
+      ? Math.round((group.avgW / mapping!.units) * 10) / 10
+      : undefined
     return {
       id: `${station.id}-${p.kind}` as DeviceId,
       stationId: station.id,
@@ -217,8 +293,10 @@ export const DEVICE_CATALOG: DeviceSpec[] = STATIONS.flatMap((station) =>
       name,
       english,
       ratedWatts,
+      typicalWatts,
       standbyWatts,
       measuredGroup: group?.id,
+      measuredUnits: mapping?.units,
       color: station.color,
       localPosition: p.position,
       position: toWorld(station, p.position),
