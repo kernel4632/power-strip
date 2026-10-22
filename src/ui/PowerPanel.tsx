@@ -134,7 +134,7 @@ export function PowerPanel() {
                 </Badge>
               )}
               {device && (
-                <Badge variant="outline">运行均值 · 均分</Badge>
+                <Badge variant="outline">记录峰值 · 均分</Badge>
               )}
             </div>
             {spec && (

@@ -73,13 +73,12 @@ export function toWorld(station: StationSpec, local: Point3): Point3 {
     station.position[2] - local[0] * s + local[2] * c,
   ]
 }
-/** On-state power is the group's mean nonzero reading, equally allocated to its units.
- * Historical zero intervals remain unchanged; the computer clock never controls a switch.
+/** 100% load uses the recorded group peak, equally allocated to its units.
+ * This is a reference for interaction, not a nameplate rating or measured single-unit peak.
+ * Historical records remain unchanged; the computer clock never controls a switch.
  */
 export function deviceReading(spec: DeviceSpec): { watts: number; source: PowerSource } {
-  const values = MEASURED_MAP[spec.measuredGroup].series.filter(watts => watts > 0)
-  const watts = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length / spec.measuredUnits : 0
-  return { watts, source: 'allocated' }
+  return { watts: spec.referenceWatts, source: 'allocated' }
 }
 
 type Placement = {
