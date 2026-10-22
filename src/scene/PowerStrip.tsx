@@ -40,7 +40,7 @@ function Cable({ id }: { id: DeviceId }) {
   const spec = DEVICE_MAP[id]
   const flow = usePowerStore((s) => s.energyFlow)
   const active = usePowerStore(
-    (s) => s.masterOn && s.strips[spec.stationId] && s.devices[id].on,
+    (s) => s.masterOn && s.strips[spec.stationId] && s.devices[id].on && s.devices[id].watts > 0,
   )
   const dots = useRef<Group>(null)
   const point = useRef(new Vector3())
@@ -169,11 +169,11 @@ function Strip({ id }: { id: StationId }) {
           color="#f0eee2"
           round={0.001}
         />
-        {devices.map((d) => (
+        {Array.from({ length: 4 }, (_, socket) => (
           <group
-            key={d.id}
-            name={`socket-${id}-${d.socket + 1}`}
-            position={[-0.29 + d.socket * 0.18, 0.029, 0]}
+            key={socket}
+            name={`socket-${id}-${socket + 1}`}
+            position={[-0.29 + socket * 0.18, 0.029, 0]}
           >
             <Box size={[0.139, 0.002, 0.089]} color="#d3d8cb" round={0.001} />
             {[-0.019, 0.019].map((x) => (
@@ -184,6 +184,7 @@ function Strip({ id }: { id: StationId }) {
                 color="#4c5d53"
               />
             ))}
+            {devices.some(d => d.socket === socket) && <group>
             <Box
               size={[0.068, 0.034, 0.07]}
               position={[0, 0.019, -0.012]}
@@ -202,6 +203,7 @@ function Strip({ id }: { id: StationId }) {
               radius={0.006}
               color="#829886"
             />
+            </group>}
           </group>
         ))}
         <Box

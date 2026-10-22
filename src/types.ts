@@ -34,14 +34,11 @@ export interface DeviceSpec {
   kind: DeviceKind
   name: string
   english: string
-  ratedWatts: number
-  /** 该组 24 小时平均功率折算到单台，用作实测读数缺失时的常态值 */
-  typicalWatts?: number
-  standbyWatts: number
-  /** 对应的实测设备组 id，没有实测记录的设备为空 */
-  measuredGroup?: string
+  /** 记录峰值均分到单台，仅用于图表量程，不是额定功率。 */
+  referenceWatts: number
+  measuredGroup: string
   /** 该实测组记录的是几台设备，用来把组合计功率折算成单台 */
-  measuredUnits?: number
+  measuredUnits: number
   color: string
   localPosition: Point3
   position: Point3
@@ -53,7 +50,7 @@ export interface DeviceSpec {
   defaultOn: boolean
 }
 /** 功率读数的来源，决定界面上挂哪个徽章。 */
-export type PowerSource = 'measured' | 'typical' | 'nominal'
+export type PowerSource = 'allocated'
 export interface DeviceState {
   on: boolean
   level: number
