@@ -5,6 +5,7 @@ const server = await createServer({ configFile: false, server: { middlewareMode:
 try {
   const { MEASURED_GROUPS: groups, MEASURED_TOTAL: total } = await server.ssrLoadModule('/src/data/measured.ts')
   const { DEVICE_CATALOG: devices, STATIONS, deviceReading } = await server.ssrLoadModule('/src/data/catalog.ts')
+  const { SCENE_MEASURED_GROUPS: sceneGroups, SCENE_MEASURED_TOTAL: sceneTotal } = await server.ssrLoadModule('/src/data/sceneMeasured.ts')
   const { STRIP_SPECS: strips, DESK_STRIP } = await server.ssrLoadModule('/src/data/strips.ts')
   const { DEVICE_REFERENCES: references, DEVICE_REFERENCE_MAP: refMap, POWER_SOURCE, STRIP_SOURCE, DEVICE_SOURCE } = await server.ssrLoadModule('/src/data/references.ts')
   const { usePowerStore: store } = await server.ssrLoadModule('/src/store/usePowerStore.ts')
@@ -31,6 +32,13 @@ try {
   assert.equal(new Set(devices.map(d => d.id)).size, devices.length)
   const represented = groups.filter(g => devices.some(d => d.measuredGroup === g.id))
   assert.equal(represented.length, 6)
+  assert.deepEqual(sceneGroups.map(g => g.id).sort(), ['android', 'gaming', 'iphone', 'lamp', 'macbook', 'tablet'])
+  assert.equal(sceneTotal.units, 14)
+  assert.equal(sceneTotal.series.length, 144)
+  near(sceneTotal.energyWh, 3361.1666666666665)
+  near(sceneTotal.avgW, 140.04861111111111)
+  assert.equal(sceneTotal.peakW, 590)
+  assert.equal(sceneTotal.series[0], 590)
   for (const g of represented) assert.equal(devices.filter(d => d.measuredGroup === g.id).length, g.units, g.id)
   assert.ok(devices.filter(d => d.measuredGroup === 'gaming').every(d => d.kind === 'laptop'))
   for (const g of groups) {
@@ -44,6 +52,7 @@ try {
   assert.ok(Object.values(store.getState().devices).every(d => d.watts > 0))
   for (let i=0; i<144; i++) {
     near(groups.reduce((sum,g) => sum+g.series[i],0), total.series[i])
+    near(represented.reduce((sum,g) => sum+g.series[i],0), sceneTotal.series[i])
     store.getState().tick(0, at(i).getTime())
     near(Object.values(store.getState().devices).reduce((sum,d) => sum+d.watts,0), expected)
     for (const g of represented) near(devices.filter(d=>d.measuredGroup===g.id).reduce((sum,d)=>sum+deviceReading(d).watts,0),g.peakW)
@@ -85,5 +94,5 @@ try {
   near(store.getState().devices['s2-laptop'].watts,30)
   store.getState().toggle('s2-laptop')
   assert.equal(store.getState().devices['s2-laptop'].watts,0)
-  console.log('Data checks passed: workbook provenance, 12 device references, source totals, 144 intervals, peak allocation, clock independence, immediate switches, MacBook 100%/50%/off and session energy.')
+  console.log('Data checks passed: workbook provenance, scene-only scope (6 groups / 14 devices), 3.361167 kWh / 590 W historical peak, 144 intervals, peak allocation, clock independence, immediate switches, MacBook 100%/50%/off and session energy.')
 } finally { await server.close() }

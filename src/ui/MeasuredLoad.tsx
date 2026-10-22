@@ -9,20 +9,21 @@ import {
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Sparkline } from '@/components/ui/sparkline'
-import { MEASURED_GROUPS, MEASURED_MAP, MEASURED_TIMES, MEASURED_TOTAL } from '../data/measured'
+import { MEASURED_MAP, MEASURED_TIMES } from '../data/measured'
+import { SCENE_MEASURED_GROUPS, SCENE_MEASURED_TOTAL } from '../data/sceneMeasured'
 import type { DeviceSpec } from '../types'
 import { DataSource } from './DataSource'
 import { DEVICE_REFERENCE_MAP } from '../data/references'
 
-const BY_AVERAGE = [MEASURED_TOTAL, ...[...MEASURED_GROUPS].sort((a, b) => b.avgW - a.avgW)]
+const BY_AVERAGE = [SCENE_MEASURED_TOTAL, ...[...SCENE_MEASURED_GROUPS].sort((a, b) => b.avgW - a.avgW)]
 
 /**
- * 原表 24 小时负荷。曲线是那一天的记录，不随开关变化；
+ * 场景已建模设备的 24 小时负荷。曲线是那一天的记录，不随开关变化；
  * 该历史记录不参与当前场景的电源开关控制。
  */
 export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
   const [active, setActive] = useState<string>(BY_AVERAGE[0]?.id ?? '')
-  const group = device ? MEASURED_MAP[device.measuredGroup] : BY_AVERAGE.find((item) => item.id === active) ?? MEASURED_TOTAL
+  const group = device ? MEASURED_MAP[device.measuredGroup] : BY_AVERAGE.find((item) => item.id === active) ?? SCENE_MEASURED_TOTAL
   const divisor = device?.measuredUnits ?? 1
   if (!group) return null
   const data = group.series.map((value, i) => ({

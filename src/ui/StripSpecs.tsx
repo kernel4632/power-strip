@@ -1,22 +1,14 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
-import { STRIP_SPECS, type StripSpec } from '../data/strips'
+import { DESK_STRIP, type StripSpec } from '../data/strips'
 import { DataSource } from './DataSource'
 
-export function StripSpecs({ current }: { current?: StripSpec }) {
+export function StripSpecs() {
   return (
     <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
-      <CardHeader className="px-2"><CardTitle>{current ? '插排参考规格' : '插排资料'}</CardTitle></CardHeader>
+      <CardHeader className="px-2"><CardTitle>插排参考规格</CardTitle></CardHeader>
       <CardContent className="space-y-3 px-2">
-        {current && <Spec spec={current} />}
-        <Collapsible>
-          <CollapsibleTrigger asChild><Button variant="outline" className="w-full">查看 12 款插排</Button></CollapsibleTrigger>
-          <CollapsibleContent className="space-y-3 pt-3">
-            {STRIP_SPECS.map(spec => <Spec key={spec.id} spec={spec} />)}
-          </CollapsibleContent>
-        </Collapsible>
+        <Spec spec={DESK_STRIP} />
         <DataSource strips />
       </CardContent>
     </Card>

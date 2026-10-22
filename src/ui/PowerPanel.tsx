@@ -38,7 +38,6 @@ import type { DeviceId, StationId } from '../types'
 import { MeasuredLoad } from './MeasuredLoad'
 import { PowerChart } from './PowerChart'
 import { StripSpecs } from './StripSpecs'
-import { DESK_STRIP } from '../data/strips'
 
 export function PowerPanel() {
   const state = usePowerStore()
@@ -315,7 +314,7 @@ export function PowerPanel() {
                 </CardContent>
               </Card>
             )}
-            {!spec && <StripSpecs current={station ? DESK_STRIP : undefined} />}
+            {!spec && <StripSpecs />}
             {spec && (
               <>
                 <Button
