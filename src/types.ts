@@ -37,6 +37,8 @@ export interface DeviceSpec {
   description: string
   ratedWatts: number
   standbyWatts: number
+  /** 对应的实测设备组 id，没有实测记录的设备为空 */
+  measuredGroup?: string
   color: string
   localPosition: Point3
   position: Point3

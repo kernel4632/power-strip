@@ -8,6 +8,7 @@ import type {
   StationId,
   StationSpec,
 } from '../types'
+import { MEASURED_MAP } from './measured'
 
 export const CIRCUIT_LIMIT = 2200
 export const VOLTAGE = 220
@@ -83,6 +84,20 @@ const descriptions: Record<DeviceKind, [string, string, number, number]> = {
   printer: ['桌面打印机', 'COMPACT PRINTER', 45, 1],
   humidifier: ['小型加湿器', 'AIR & COMFORT', 18, 0],
   headphones: ['耳机充电架', 'HEADPHONE DOCK', 8, 0.2],
+}
+/**
+ * 场景里的哪类设备对应实测表里的哪一组，以及该组记录的是几台。
+ * 实测表按「设备组合计功率」记录，额定值取该组峰值除以台数。
+ * 显示器、风扇、音箱、打印机、加湿器、耳机架没有对应记录，保持示意值。
+ */
+const measuredKinds: Partial<
+  Record<DeviceKind, { group: string; units: number }>
+> = {
+  phone: { group: 'iphone', units: 2 },
+  tablet: { group: 'tablet', units: 2 },
+  laptop: { group: 'macbook', units: 2 },
+  tower: { group: 'gaming', units: 2 },
+  lamp: { group: 'lamp', units: 4 },
 }
 type Placement = {
   kind: DeviceKind
@@ -189,7 +204,12 @@ const inventories: Record<StationId, Placement[]> = {
 }
 export const DEVICE_CATALOG: DeviceSpec[] = STATIONS.flatMap((station) =>
   inventories[station.id].map((p, socket) => {
-    const [name, english, ratedWatts, standbyWatts] = descriptions[p.kind]
+    const [name, english, fallbackRated, standbyWatts] = descriptions[p.kind]
+    const mapping = measuredKinds[p.kind]
+    const group = mapping ? MEASURED_MAP[mapping.group] : undefined
+    const ratedWatts = group
+      ? Math.round((group.peakW / mapping!.units) * 10) / 10
+      : fallbackRated
     return {
       id: `${station.id}-${p.kind}` as DeviceId,
       stationId: station.id,
@@ -198,6 +218,7 @@ export const DEVICE_CATALOG: DeviceSpec[] = STATIONS.flatMap((station) =>
       english,
       ratedWatts,
       standbyWatts,
+      measuredGroup: group?.id,
       color: station.color,
       localPosition: p.position,
       position: toWorld(station, p.position),
@@ -207,7 +228,9 @@ export const DEVICE_CATALOG: DeviceSpec[] = STATIONS.flatMap((station) =>
       height: p.height,
       cablePort: p.port,
       defaultOn: p.on,
-      description: `${station.name}的${name}，连接该床位独立插排的 ${socket + 1} 号插孔。开关或调整负载不会影响其他床位；功率是演示参数，不是真实电表读数。`,
+      description: group
+        ? `${station.name}的${name}，连接该床位独立插排的 ${socket + 1} 号插孔。功率取自实测记录「${group.name}」：该组 ${mapping!.units} 台峰值合计 ${group.peakW} W，按单台折算为 ${ratedWatts} W。`
+        : `${station.name}的${name}，连接该床位独立插排的 ${socket + 1} 号插孔。这台设备不在本次 24 小时实测记录里，功率为示意值。`,
     }
   }),
 )

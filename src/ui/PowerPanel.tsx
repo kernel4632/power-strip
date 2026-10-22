@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -36,7 +37,10 @@ import {
 } from '../data/catalog'
 import { usePowerStore } from '../store/usePowerStore'
 import type { DeviceId, StationId } from '../types'
+import { MEASURED_MAP } from '../data/measured'
+import { MeasuredLoad } from './MeasuredLoad'
 import { PowerChart } from './PowerChart'
+import { StripSpecs } from './StripSpecs'
 
 export function PowerPanel() {
   const state = usePowerStore()
@@ -76,6 +80,12 @@ export function PowerPanel() {
         : '负载'
   const level = loadLevel(watts, limit)
   const energyText = formatEnergy(energy)
+  const measuredGroup = spec?.measuredGroup
+    ? MEASURED_MAP[spec.measuredGroup]
+    : null
+  const measuredEnergy = measuredGroup
+    ? formatEnergy(measuredGroup.energyWh)
+    : null
   return (
     <Sheet
       open={open}
@@ -131,6 +141,7 @@ export function PowerPanel() {
                   {station?.name} · 插孔 {spec.socket + 1}
                 </Badge>
               )}
+              {measuredGroup && <Badge variant="outline">实测功率</Badge>}
             </div>
             {spec && (
               <Button
@@ -238,6 +249,15 @@ export function PowerPanel() {
                 />
               </CardContent>
             </Card>
+            {!spec && !station && <MeasuredLoad />}
+            {spec && measuredGroup && measuredEnergy && (
+              <CardDescription className="px-2">
+                实测「{measuredGroup.name}」24 小时：峰值{' '}
+                {measuredGroup.peakW} W，平均 {measuredGroup.avgW.toFixed(0)} W，
+                累计 {measuredEnergy.value} {measuredEnergy.unit}，占全寝{' '}
+                {(measuredGroup.share * 100).toFixed(1)}%。
+              </CardDescription>
+            )}
             <Separator />
             <div className="grid grid-cols-2 gap-4">
               <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
@@ -309,6 +329,7 @@ export function PowerPanel() {
                 </CardContent>
               </Card>
             )}
+            {!station && <StripSpecs />}
             {spec && (
               <>
                 <Button
