@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -74,9 +73,6 @@ export function StripSpecs() {
                 </div>
               </div>
             ))}
-            <CardDescription>
-              在售 12 款插排的孔位、最大功率与参考价；价格为表格记录值，未含运费。
-            </CardDescription>
           </CardContent>
         </CollapsibleContent>
       </Card>

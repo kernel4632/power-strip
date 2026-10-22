@@ -228,9 +228,6 @@ export const DEVICE_CATALOG: DeviceSpec[] = STATIONS.flatMap((station) =>
       height: p.height,
       cablePort: p.port,
       defaultOn: p.on,
-      description: group
-        ? `${station.name}的${name}，连接该床位独立插排的 ${socket + 1} 号插孔。功率取自实测记录「${group.name}」：该组 ${mapping!.units} 台峰值合计 ${group.peakW} W，按单台折算为 ${ratedWatts} W。`
-        : `${station.name}的${name}，连接该床位独立插排的 ${socket + 1} 号插孔。这台设备不在本次 24 小时实测记录里，功率为示意值。`,
     }
   }),
 )

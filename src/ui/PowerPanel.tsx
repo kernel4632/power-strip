@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -82,9 +81,6 @@ export function PowerPanel() {
   const energyText = formatEnergy(energy)
   const measuredGroup = spec?.measuredGroup
     ? MEASURED_MAP[spec.measuredGroup]
-    : null
-  const measuredEnergy = measuredGroup
-    ? formatEnergy(measuredGroup.energyWh)
     : null
   return (
     <Sheet
@@ -250,14 +246,6 @@ export function PowerPanel() {
               </CardContent>
             </Card>
             {!spec && !station && <MeasuredLoad />}
-            {spec && measuredGroup && measuredEnergy && (
-              <CardDescription className="px-2">
-                实测「{measuredGroup.name}」24 小时：峰值{' '}
-                {measuredGroup.peakW} W，平均 {measuredGroup.avgW.toFixed(0)} W，
-                累计 {measuredEnergy.value} {measuredEnergy.unit}，占全寝{' '}
-                {(measuredGroup.share * 100).toFixed(1)}%。
-              </CardDescription>
-            )}
             <Separator />
             <div className="grid grid-cols-2 gap-4">
               <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">

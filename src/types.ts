@@ -34,7 +34,6 @@ export interface DeviceSpec {
   kind: DeviceKind
   name: string
   english: string
-  description: string
   ratedWatts: number
   standbyWatts: number
   /** 对应的实测设备组 id，没有实测记录的设备为空 */

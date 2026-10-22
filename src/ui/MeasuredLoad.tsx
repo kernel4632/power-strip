@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Alert, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -46,9 +46,7 @@ export function MeasuredLoad() {
           <CardTitle>实测 24 小时负荷</CardTitle>
           <Badge variant="secondary">10 分钟 × 144</Badge>
         </div>
-        <CardDescription>
-          {group ? group.name : '全寝 12 类设备合计'}
-        </CardDescription>
+        {group && <CardDescription>{group.name}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-4 px-2">
         <Sparkline data={data} unit="W" label="实测 24 小时功率曲线" />
@@ -71,10 +69,6 @@ export function MeasuredLoad() {
         {peak > CIRCUIT_LIMIT && (
           <Alert>
             <AlertTitle>实测峰值超过线路限值</AlertTitle>
-            <AlertDescription>
-              记录到的最高功率 {peak} W，高于本设计的 {CIRCUIT_LIMIT} W
-              单路上限，出现于空调、电吹风与电煮锅同时运行。
-            </AlertDescription>
           </Alert>
         )}
         <Separator />
@@ -103,9 +97,6 @@ export function MeasuredLoad() {
             </Button>
           ))}
         </div>
-        <CardDescription>
-          占全部耗电量比例；点击任一设备查看它自己的 24 小时曲线。
-        </CardDescription>
       </CardContent>
     </Card>
   )

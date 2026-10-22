@@ -378,9 +378,6 @@ export default function App() {
                   </Button>
                 </div>
                 <div className="mt-4 space-y-4">
-                  <CardDescription>
-                    点击床位进入桌面，点电器查看功率、开关和负载。每个床位独立供电。
-                  </CardDescription>
                   <Separator />
                   <div className="flex justify-between text-sm">
                     <KbdGroup>
