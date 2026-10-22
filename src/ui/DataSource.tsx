@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { ChevronDown } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { DEVICE_REFERENCE_MAP, DEVICE_SOURCE, POWER_SOURCE, type WorkbookSource } from '../data/references'
 import type { DeviceSpec } from '../types'
@@ -11,11 +12,12 @@ export function DataSource({ groupId, device }: {
   const reference = groupId ? DEVICE_REFERENCE_MAP[groupId] : undefined
   return <Collapsible>
     <CollapsibleTrigger asChild>
-      <Button variant="ghost" className="min-h-11 w-full justify-start px-0 text-xs text-muted-foreground">
+      <Button variant="ghost" className="group min-h-11 w-full justify-between rounded-none px-0 text-body text-muted-foreground hover:bg-muted/50">
         数据来源
+        <ChevronDown className="size-3.5 transition-transform duration-(--motion-control) ease-ui group-data-[state=open]:rotate-180" />
       </Button>
     </CollapsibleTrigger>
-    <CollapsibleContent className="space-y-3 pt-2 text-xs leading-relaxed text-muted-foreground">
+    <CollapsibleContent className="space-y-3 pt-2 text-body leading-relaxed text-muted-foreground">
       <Source source={POWER_SOURCE} />
         <p>小组收集整理，包含依据资料估读的数值。每 10 分钟一个区间，共 144 个；日耗电按区间功率求和 ÷ 6000 计算，24:00 不重复计入。</p>
         {device ? <p>本台的曲线与峰值由 {device.measuredUnits} 台合计均分。当前功率按单台记录峰值 × 负载比例计算，开关控制本次用电，不改变全天记录。</p>

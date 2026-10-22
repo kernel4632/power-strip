@@ -70,7 +70,7 @@ export function Sparkline({
       aria-label={label}
       aria-describedby={summaryId}
       className={cn(
-        'relative w-full select-none',
+        'relative w-full select-none @container',
         compact ? 'h-16' : 'space-y-2',
         className,
       )}
@@ -189,9 +189,9 @@ export function Sparkline({
           )}
         </div>
         {!compact && (
-          <div className="flex justify-between pt-2 text-xs tabular-nums text-muted-foreground">
+          <div className="flex justify-between gap-2 pt-2 text-xs tabular-nums text-muted-foreground">
             <span>{data[0].label}</span>
-            <span className="hidden sm:inline">
+            <span className="hidden @xs:inline">
               {data[Math.floor((count - 1) / 2)].label}
             </span>
             <span>{data[count - 1].label}</span>

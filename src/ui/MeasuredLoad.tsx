@@ -34,27 +34,27 @@ export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
   return (
     <div className="space-y-5">
       {!device && (
-        <p className="text-sm font-medium">{group.name}</p>
+        <p className="text-body font-medium">{group.name}</p>
       )}
       <Sparkline data={data} unit="W" label="24 小时功率记录" />
       <div className="grid grid-cols-3 gap-3 border-y border-rule py-3">
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">平均</p>
-          <p className="font-sans text-sm tabular-nums">
+          <p className="text-body text-muted-foreground">平均</p>
+          <p className="font-sans text-body tabular-nums">
             {formatPower(group.avgW / divisor)}
             <span className="ml-1 text-xs text-muted-foreground">W</span>
           </p>
         </div>
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">峰值</p>
-          <p className="font-sans text-sm tabular-nums">
+          <p className="text-body text-muted-foreground">峰值</p>
+          <p className="font-sans text-body tabular-nums">
             {formatPower(group.peakW / divisor)}
             <span className="ml-1 text-xs text-muted-foreground">W</span>
           </p>
         </div>
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">日耗电</p>
-          <p className="font-sans text-sm tabular-nums">
+          <p className="text-body text-muted-foreground">日耗电</p>
+          <p className="font-sans text-body tabular-nums">
             {energy}
             <span className="ml-1 text-xs text-muted-foreground">kWh</span>
           </p>
@@ -67,7 +67,7 @@ export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
             <Button
               key={item.id}
               variant="ghost"
-              className="h-11 w-full justify-between gap-3 rounded-none px-0 font-normal hover:bg-transparent"
+              className="h-11 w-full justify-between gap-3 rounded-none px-0 text-body font-normal hover:bg-transparent"
               aria-pressed={active === item.id}
               onClick={() => setActive(item.id)}
             >

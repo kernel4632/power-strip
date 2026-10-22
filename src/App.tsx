@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { GlassSurface } from '@/components/ui/glass-surface'
 import { PowerMark } from '@/components/ui/power-mark'
+import { PowerNumber } from '@/components/ui/power-number'
 import { Toggle } from '@/components/ui/toggle'
 import {
   Tooltip,
@@ -29,7 +30,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { cn } from '@/lib/utils'
-import { formatPower } from '@/lib/format'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
   CAMERA_VIEWS,
@@ -153,7 +153,7 @@ export default function App() {
         <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex h-14 items-center justify-between gap-3 px-4 md:px-6">
           <Button
             variant="ghost"
-            className="pointer-events-auto h-9 gap-2.5 px-0 text-foreground hover:bg-transparent"
+            className="pointer-events-auto h-11 gap-2.5 px-0 text-foreground hover:bg-transparent"
             aria-label="返回四人寝全景"
             onClick={() => state.setView('overview')}
           >
@@ -169,7 +169,7 @@ export default function App() {
               onOpenChange={(open) => setMenu(open ? 'camera' : null)}
             >
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="观察角度">
+                <Button variant="tool" size="icon" aria-label="观察角度">
                   <Focus />
                 </Button>
               </PopoverTrigger>
@@ -198,7 +198,7 @@ export default function App() {
                         key={id}
                         variant="ghost"
                         className={cn(
-                          'h-9 justify-start rounded-none px-0 text-sm',
+                          'h-11 justify-start rounded-none px-0 text-sm',
                           !active && state.cameraView === id
                             ? 'text-foreground'
                             : 'text-muted-foreground',
@@ -221,7 +221,7 @@ export default function App() {
                   pressed={state.energyFlow}
                   onPressedChange={state.toggleFlow}
                   aria-label="切换能流"
-                  className="text-muted-foreground hover:bg-transparent hover:text-foreground data-[state=on]:bg-transparent data-[state=on]:text-foreground data-[state=on]:ring-0"
+                  variant="tool"
                 >
                   <Zap />
                 </Toggle>
@@ -234,7 +234,7 @@ export default function App() {
                   pressed={state.labels}
                   onPressedChange={state.toggleLabels}
                   aria-label="切换模型标记"
-                  className="text-muted-foreground hover:bg-transparent hover:text-foreground data-[state=on]:bg-transparent data-[state=on]:text-foreground data-[state=on]:ring-0"
+                  variant="tool"
                 >
                   <Eye />
                 </Toggle>
@@ -246,7 +246,7 @@ export default function App() {
               onOpenChange={(open) => setMenu(open ? 'help' : null)}
             >
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="交互指南">
+                <Button variant="tool" size="icon" aria-label="交互指南">
                   <Info />
                 </Button>
               </PopoverTrigger>
@@ -301,7 +301,7 @@ export default function App() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="ghost"
+                  variant="tool"
                   size="icon"
                   onClick={state.toggleNight}
                   aria-label={state.night ? '切换日间场景' : '切换夜间场景'}
@@ -322,18 +322,18 @@ export default function App() {
         <Button
           variant="ghost"
           className={cn(
-            'absolute bottom-4 left-4 z-20 h-auto w-56 flex-col items-stretch gap-0 rounded-none bg-card p-4 text-left text-card-foreground hover:bg-card md:bottom-6 md:left-6',
+            'absolute bottom-4 left-4 z-20 h-auto w-56 flex-col items-stretch gap-0 rounded-lg border border-rule bg-card p-4 text-left text-card-foreground hover:bg-card md:bottom-6 md:left-6',
             panelOpen && 'hidden',
           )}
           onClick={() => state.select('room')}
           aria-label="打开全寝用电"
         >
-          <span className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span className="flex items-center justify-between gap-2 text-body text-muted-foreground">
             全寝
             <ArrowUpRight className="size-3.5" />
           </span>
           <span className="mt-1 flex items-baseline gap-1.5 font-sans text-5xl font-medium tracking-tight tabular-nums">
-            {formatPower(total)}
+            <PowerNumber value={total} />
             <span className="text-sm tracking-normal text-muted-foreground">
               W
             </span>

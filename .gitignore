@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 .playwright-mcp
+.shots/
 .taste-skill/
 .impeccable/
 .qa-preview.html
