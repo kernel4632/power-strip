@@ -37,7 +37,6 @@ import { usePowerStore } from '../store/usePowerStore'
 import type { DeviceId, StationId } from '../types'
 import { MeasuredLoad } from './MeasuredLoad'
 import { PowerChart } from './PowerChart'
-import { StripSpecs } from './StripSpecs'
 
 export function PowerPanel() {
   const state = usePowerStore()
@@ -52,6 +51,7 @@ export function PowerPanel() {
       ? STATION_MAP[state.selected as StationId]
       : null
   const devices = station ? stationDevices(station.id) : DEVICE_CATALOG
+  const hasRecords = !station || !!spec
   const device = spec ? state.devices[spec.id] : null
   const watts = device
     ? device.watts
@@ -161,37 +161,35 @@ export function PowerPanel() {
             </SheetClose>
           </div>
         </div>
-        <div
-          className="flex shrink-0 gap-5 border-b px-4"
-          aria-label="详情内容"
-        >
-          {(['control', 'record'] as const).map((value) => (
-            <Button
-              key={value}
-              variant="ghost"
-              aria-pressed={view === value}
-              className={cn(
-                'rounded-none border-b-2 border-transparent px-0 text-xs',
-                view === value
-                  ? 'border-primary text-primary'
-                  : 'text-muted-foreground',
-              )}
-              onClick={() => {
-                setView(value)
-                if (isMobile) state.setPanelExpanded(value === 'record')
-              }}
-            >
-              {value === 'control'
-                ? '当前模拟'
-                : station && !spec
-                  ? '插排资料'
-                  : '24 小时记录'}
-            </Button>
-          ))}
-        </div>
+        {hasRecords && (
+          <div
+            className="flex shrink-0 gap-5 border-b px-4"
+            aria-label="详情内容"
+          >
+            {(['control', 'record'] as const).map((value) => (
+              <Button
+                key={value}
+                variant="ghost"
+                aria-pressed={view === value}
+                className={cn(
+                  'rounded-none border-b-2 border-transparent px-0 text-xs',
+                  view === value
+                    ? 'border-primary text-primary'
+                    : 'text-muted-foreground',
+                )}
+                onClick={() => {
+                  setView(value)
+                  if (isMobile) state.setPanelExpanded(value === 'record')
+                }}
+              >
+                {value === 'control' ? '当前模拟' : '24 小时记录'}
+              </Button>
+            ))}
+          </div>
+        )}
         <ScrollArea key={view} className="min-h-0 flex-1">
           <div className="space-y-5 p-4">
-            {view === 'control' ? (
+            {view === 'control' || !hasRecords ? (
               <>
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -358,8 +356,6 @@ export function PowerPanel() {
                   </div>
                 )}
               </>
-            ) : station && !spec ? (
-              <StripSpecs />
             ) : (
               <MeasuredLoad device={spec ?? undefined} />
             )}

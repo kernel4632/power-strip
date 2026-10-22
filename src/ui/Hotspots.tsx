@@ -59,15 +59,10 @@ export function Hotspots() {
             title={`${d.name} · ${formatPower(state.devices[d.id].watts)} W`}
             onClick={() => state.select(d.id)}
           >
-            <span className="font-mono">{d.socket + 1}</span>
-            {state.selected === d.id && (
-              <>
-                <span>{d.name}</span>
-                <span className="font-mono">
-                  {formatPower(state.devices[d.id].watts)} W
-                </span>
-              </>
-            )}
+            <span>{d.name}</span>
+            <span className="font-mono">
+              {formatPower(state.devices[d.id].watts)} W
+            </span>
           </Button>
         </div>
       ))}

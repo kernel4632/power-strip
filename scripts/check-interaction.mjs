@@ -14,8 +14,8 @@ try {
   const { usePowerStore: store } = await server.ssrLoadModule(
     '/src/store/usePowerStore.ts',
   )
-  // The old layout put five targets on the same desk. They must remain usable
-  // with the mobile half-height drawer and at the desktop side-panel size.
+  // All four device names and powers are visible together, plus the strip.
+  // Full labels must fit with the mobile drawer and desktop side panel.
   for (const [width, height] of [
     [366, 358],
     [641, 285],
@@ -30,7 +30,7 @@ try {
         id: String(i),
         x,
         y,
-        width: i === 4 ? 190 : 44,
+        width: i === 0 ? 44 : 190,
         height: 44,
       }))
       const result = placeHotspots(items, width, height, '4')
