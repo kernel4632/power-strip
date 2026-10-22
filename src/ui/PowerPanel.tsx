@@ -134,7 +134,7 @@ export function PowerPanel() {
                 </Badge>
               )}
               {device && (
-                <Badge variant="outline">组内均分</Badge>
+                <Badge variant="outline">运行均值 · 均分</Badge>
               )}
             </div>
             {spec && (
@@ -243,7 +243,7 @@ export function PowerPanel() {
                 />
               </CardContent>
             </Card>
-            {(spec || !station) && <MeasuredLoad key={spec?.id ?? 'all'} index={state.measuredIndex} device={spec ?? undefined} />}
+            {(spec || !station) && <MeasuredLoad key={spec?.id ?? 'all'} device={spec ?? undefined} />}
             <Separator />
             <div className="grid grid-cols-2 gap-4">
               <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
