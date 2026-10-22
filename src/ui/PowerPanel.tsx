@@ -195,14 +195,7 @@ export function PowerPanel() {
               <>
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">
-                      {spec
-                        ? `${station?.name} / 插孔 ${spec.socket + 1}`
-                        : station
-                          ? '本床位功率'
-                          : '14 台设备 · 当前功率'}
-                    </p>
-                    <p className="mt-1 flex items-baseline gap-2 font-mono text-3xl text-primary">
+                    <p className="flex items-baseline gap-2 font-mono text-3xl text-primary">
                       {formatPower(watts)}
                       <span className="text-sm text-muted-foreground">W</span>
                     </p>
@@ -225,7 +218,7 @@ export function PowerPanel() {
                     />
                     <Label
                       htmlFor="power-switch"
-                      className="text-xs text-muted-foreground"
+                      className="sr-only"
                     >
                       {active ? '电源开启' : '电源关闭'}
                     </Label>
@@ -252,16 +245,11 @@ export function PowerPanel() {
                       }
                       disabled={!active}
                     />
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      按组记录峰值均分 × 负载比例。
-                      {unavailable ?? '开关只影响当前模拟。'}
-                    </p>
                   </div>
                 )}
-                {!spec && (
+                {unavailable && (spec || station) && (
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    {unavailable ?? '调整供电，观察设备与用电变化。'}
-                    历史记录保持原样。
+                    {unavailable}
                   </p>
                 )}
                 {spec && (
@@ -270,15 +258,12 @@ export function PowerPanel() {
                     className="w-full justify-between"
                     onClick={state.focus}
                   >
-                    在场景中近看
+                    近看设备
                     <Focus />
                   </Button>
                 )}
                 {!spec && station && (
                   <section aria-label="此床位设备">
-                    <h3 className="mb-1 text-xs text-muted-foreground">
-                      插孔 / 设备
-                    </h3>
                     {deviceRows}
                   </section>
                 )}
@@ -315,7 +300,7 @@ export function PowerPanel() {
                 )}
                 <Separator />
                 <section className="space-y-3">
-                  <h3 className="text-sm font-medium">本次操作的功率轨迹</h3>
+                  <h3 className="text-sm font-medium">功率趋势</h3>
                   <PowerChart
                     history={state.history}
                     device={spec?.id}
@@ -376,15 +361,7 @@ export function PowerPanel() {
             ) : station && !spec ? (
               <StripSpecs />
             ) : (
-              <>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  小组收集的 24 小时记录，不随本次操作改变。
-                  {spec
-                    ? '本设备为同组数据的单台均分值。'
-                    : '仅统计场景内的 6 类设备。'}
-                </p>
-                <MeasuredLoad device={spec ?? undefined} />
-              </>
+              <MeasuredLoad device={spec ?? undefined} />
             )}
             {station && (
               <Button

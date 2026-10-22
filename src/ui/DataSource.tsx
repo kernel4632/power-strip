@@ -13,14 +13,14 @@ export function DataSource({ groupId, device, strips = false }: {
   return <Collapsible>
     <CollapsibleTrigger asChild>
       <Button variant="ghost" className="min-h-11 w-full justify-start px-0 text-xs text-muted-foreground">
-        数据来源与口径
+        数据来源
       </Button>
     </CollapsibleTrigger>
     <CollapsibleContent className="space-y-3 pt-2 text-xs leading-relaxed text-muted-foreground">
       <Source source={strips ? STRIP_SOURCE : POWER_SOURCE} range={strips ? 'A10:E10' : undefined} />
       {strips ? <p>功率、孔数、尺寸与价格沿用资料表。孔数不等于可接设备数，场景插排为示意模型。</p> : <>
         <p>小组收集整理，包含依据资料估读的数值。每 10 分钟一个区间，共 144 个；日耗电按区间功率求和 ÷ 6000 计算，24:00 不重复计入。</p>
-        {device ? <p>本台的曲线与峰值由 {device.measuredUnits} 台合计均分。当前功率按单台记录峰值 × 负载比例计算，开关控制本次用电。</p>
+        {device ? <p>本台的曲线与峰值由 {device.measuredUnits} 台合计均分。当前功率按单台记录峰值 × 负载比例计算，开关控制本次用电，不改变全天记录。</p>
           : <p>全天记录仅包含场景中已建模的 {SCENE_MEASURED_GROUPS.length} 类、{SCENE_MEASURED_TOTAL.units} 台设备；合计曲线与日耗电按这些设备重新计算。调整开关不会改动全天记录。</p>}
         {reference && <div className="space-y-1">
           <p className="font-medium text-foreground">资料表参考：{reference.model ?? reference.name}</p>

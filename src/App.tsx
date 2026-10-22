@@ -195,9 +195,6 @@ export default function App() {
               <Home />
               <h1 className="text-base font-semibold">宿舍用电观察</h1>
             </Button>
-            <span className="hidden text-xs text-muted-foreground lg:inline">
-              四个床位，一起生活
-            </span>
           </div>
           <div className="pointer-events-auto flex items-center gap-2">
             <div>
@@ -250,7 +247,7 @@ export default function App() {
           >
             <CardHeader className="gap-2 px-4">
               <CardTitle className="text-xs font-medium text-muted-foreground">
-                当前模拟 / 全寝功率
+                全寝模拟功率
               </CardTitle>
               <CardTitle className="font-mono text-5xl font-normal tracking-tight text-primary md:text-6xl">
                 {formatPower(total)}{' '}
@@ -428,13 +425,6 @@ export default function App() {
             </Popover>
           </nav>
         </GlassSurface>
-        {!panelOpen && (
-          <p className="pointer-events-none absolute left-7 top-36 z-10 text-xs leading-relaxed text-muted-foreground md:left-8 md:top-24">
-            点选桌面，探索设备用电
-            <br />
-            <span className="hidden md:inline">拖动旋转 · 滚轮缩放</span>
-          </p>
-        )}
         <PowerPanel key={state.selected ?? 'closed'} />
       </main>
     </TooltipProvider>
