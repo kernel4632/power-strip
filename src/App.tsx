@@ -332,7 +332,7 @@ export default function App() {
             全寝
             <ArrowUpRight className="size-3.5" />
           </span>
-          <span className="mt-1 flex items-baseline gap-1.5 font-mono text-5xl tracking-tight tabular-nums">
+          <span className="mt-1 flex items-baseline gap-1.5 font-sans text-5xl font-medium tracking-tight tabular-nums">
             {formatPower(total)}
             <span className="text-sm tracking-normal text-muted-foreground">
               W

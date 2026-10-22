@@ -169,7 +169,7 @@ export function Sparkline({
           {activePoint && !compact && (
             <div
               className={cn(
-                'pointer-events-none absolute top-0 whitespace-nowrap border border-border bg-popover px-2 py-1 font-mono text-xs text-popover-foreground',
+                'pointer-events-none absolute top-0 whitespace-nowrap border border-border bg-popover px-2 py-1 font-sans text-xs text-popover-foreground',
                 activeOffset < 15
                   ? 'translate-x-0'
                   : activeOffset > 85
@@ -202,7 +202,7 @@ export function Sparkline({
         <div>
           <div className="flex items-center justify-between gap-2 text-xs tabular-nums">
             <span className="text-muted-foreground">{reading.label}</span>
-            <output className="font-mono tabular-nums">
+            <output className="font-sans tabular-nums">
               {formatPower(reading.value)} {unit}
             </output>
           </div>

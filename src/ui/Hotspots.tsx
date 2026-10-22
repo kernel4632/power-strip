@@ -71,7 +71,7 @@ export function Hotspots() {
             onClick={() => state.select(d.id)}
           >
             <span>{d.name}</span>
-            <span className="font-mono tabular-nums text-muted-foreground">
+            <span className="font-sans tabular-nums text-muted-foreground">
               {formatPower(state.devices[d.id].watts)} W
             </span>
           </Button>

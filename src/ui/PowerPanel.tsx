@@ -85,7 +85,7 @@ export function PowerPanel() {
           onClick={() => state.select(d.id)}
         >
           <span className="truncate">{d.name}</span>
-          <span className="flex shrink-0 items-baseline gap-1.5 font-mono text-xs tabular-nums text-muted-foreground">
+          <span className="flex shrink-0 items-baseline gap-1.5 font-sans text-xs tabular-nums text-muted-foreground">
             {formatPower(state.devices[d.id].watts)}
             <span className="text-xs">W</span>
             <ArrowUpRight className="size-3" />
@@ -177,7 +177,7 @@ export function PowerPanel() {
                   if (isMobile) state.setPanelExpanded(value === 'record')
                 }}
               >
-                {value === 'control' ? '当前' : '记录'}
+                {value === 'control' ? '当前' : '24小时记录'}
               </Button>
             ))}
           </div>
@@ -187,7 +187,7 @@ export function PowerPanel() {
             {view === 'control' || !hasRecords ? (
               <>
                 <div className="flex items-end justify-between gap-4">
-                  <p className="flex items-baseline gap-1.5 font-mono text-4xl tracking-tight tabular-nums">
+                  <p className="flex items-baseline gap-1.5 font-sans text-4xl font-medium tracking-tight tabular-nums">
                     {formatPower(watts)}
                     <span className="text-sm tracking-normal text-muted-foreground">
                       W
@@ -220,7 +220,7 @@ export function PowerPanel() {
                       <Label id="device-level-label" className="text-xs">
                         {levelLabel}
                       </Label>
-                      <span className="font-mono tabular-nums text-muted-foreground">
+                      <span className="font-sans tabular-nums text-muted-foreground">
                         {Math.round(device.level * 100)}%
                       </span>
                     </div>
@@ -266,7 +266,7 @@ export function PowerPanel() {
                           onClick={() => state.selectStation(s.id)}
                         >
                           <span>{s.name}</span>
-                          <span className="flex shrink-0 items-baseline gap-1.5 font-mono text-xs tabular-nums text-muted-foreground">
+                          <span className="flex shrink-0 items-baseline gap-1.5 font-sans text-xs tabular-nums text-muted-foreground">
                             {formatPower(
                               stationDevices(s.id).reduce(
                                 (n, d) => n + state.devices[d.id].watts,
@@ -281,7 +281,7 @@ export function PowerPanel() {
                   </section>
                 )}
                 <section className="space-y-1">
-                  <h3 className="text-xs text-muted-foreground">功率趋势</h3>
+                  <h3 className="text-xs text-muted-foreground">本次功率</h3>
                   <PowerChart
                     history={state.history}
                     device={spec?.id}
@@ -291,13 +291,13 @@ export function PowerPanel() {
                 <div className="grid grid-cols-2 gap-4 border-t border-rule pt-4">
                   <div>
                     <p className="text-xs text-muted-foreground">本次用电</p>
-                    <p className="mt-1 font-mono text-sm tabular-nums">
+                    <p className="mt-1 font-sans text-sm tabular-nums">
                       {energy.value} {energy.unit}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">电流</p>
-                    <p className="mt-1 font-mono text-sm tabular-nums">
+                    <p className="mt-1 font-sans text-sm tabular-nums">
                       {(watts / VOLTAGE).toFixed(2)} A
                     </p>
                   </div>

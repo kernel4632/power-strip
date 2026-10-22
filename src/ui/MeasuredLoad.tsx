@@ -40,21 +40,21 @@ export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
       <div className="grid grid-cols-3 gap-3 border-y border-rule py-3">
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">平均</p>
-          <p className="font-mono text-sm tabular-nums">
+          <p className="font-sans text-sm tabular-nums">
             {formatPower(group.avgW / divisor)}
             <span className="ml-1 text-xs text-muted-foreground">W</span>
           </p>
         </div>
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">峰值</p>
-          <p className="font-mono text-sm tabular-nums">
+          <p className="font-sans text-sm tabular-nums">
             {formatPower(group.peakW / divisor)}
             <span className="ml-1 text-xs text-muted-foreground">W</span>
           </p>
         </div>
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">日耗电</p>
-          <p className="font-mono text-sm tabular-nums">
+          <p className="font-sans text-sm tabular-nums">
             {energy}
             <span className="ml-1 text-xs text-muted-foreground">kWh</span>
           </p>
@@ -78,7 +78,7 @@ export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
               >
                 {item.name}
               </span>
-              <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+              <span className="shrink-0 font-sans text-xs tabular-nums text-muted-foreground">
                 {formatPower(item.avgW)} W
               </span>
             </Button>
