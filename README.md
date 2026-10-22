@@ -25,8 +25,8 @@
 - 仅场景工具条保留 Liquid Glass React，菜单使用少量磨砂。按钮、功率读数和详情采用稳定的实色表面；日夜配色同步。
 - 1024px 及以上使用 352px 侧栏，更窄时使用半高/四分之三高底部抽屉。设备电源与负载直接显示在详情首屏。
 - 场景标签显示选中设备全名，其余以插孔编号定位；投影避让和连接线避免标签互相遮挡。
-- “当前模拟”与“24 小时记录”独立查看。功率显示共用精度规则；图表支持指针选点、持续显示读数、方向键和时间滑块。
-- 全寝面板的「24 小时记录」只展示已建模的 6 类设备及其合计，按平均功率降序排列，点选切换曲线；设备面板显示对应组的单台均分曲线。「数据来源与口径」按需展开文件、工作表、单元格范围和参考设备资料。
+- “当前”与“24 小时记录”独立查看，功率显示共用精度规则。“24 小时记录”的曲线支持指针选点、持续显示读数、方向键和时间滑块。
+- 全寝面板的「24 小时记录」只展示已建模的 6 类设备及其合计，按平均功率降序排列，点选切换曲线；设备面板显示对应组的单台均分曲线。
 - 所有二维控件直接使用 [shadcn/ui](https://ui.shadcn.com/) 官方组件，包含场景标记、详情 Sheet、开关、滑块、进度条、工具提示与加载状态。功率曲线是唯一自绘原语（`src/components/ui/sparkline.tsx`），理由见 [UI 规范](docs/ui-system.md)。
 - 配色、间距、圆角与焦点尺寸集中在 `src/index.css` 的全局 Tailwind / shadcn 变量；业务层只组合组件与标准工具类，不写控件 CSS 或内联视觉样式。
 - `npm run check:ui` 检查业务层组件规范；`npm run check:interaction` 检查标签碰撞、边界、数字和面板状态，CI 同步执行。
@@ -125,7 +125,7 @@ src/data/catalog.ts         四床位、14设备、位置、镜头、插孔映�
 src/data/measured.ts        完整 24 小时记录（脚本生成，勿手改）
 src/data/sceneMeasured.ts   按建模清单筛选的记录与场景合计
 src/data/references.ts      12 类设备参考资料与三份表格的来源（脚本生成）
-src/store/usePowerStore.ts  全寝/床位/设备状态及功率采样
+src/store/usePowerStore.ts  全寝/床位/设备状态与用电累计
 src/scene/DormRoom.tsx      上床下桌家具、建筑和生活细节
 src/scene/Appliance.tsx     11类电器模型和动画
 src/scene/PowerStrip.tsx    四个四位插排、插头、理线与能流
@@ -134,7 +134,6 @@ src/scene/StaticGeometry.tsx  静态几何按材质合批
 src/ui/Hotspots.tsx         床位/设备/插排可访问标记
 src/ui/PowerPanel.tsx       全寝、床位和设备分层详情
 src/ui/MeasuredLoad.tsx     场景记录及单台均分曲线
-src/ui/PowerChart.tsx       三层独立历史曲线
 src/components/ui/          shadcn 官方组件与唯一的自绘原语 sparkline.tsx
 docs/model-inspection.md   检查方法、修复与剩余局限
 ```

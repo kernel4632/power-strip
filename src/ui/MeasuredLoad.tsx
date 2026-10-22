@@ -7,7 +7,6 @@ import {
   SCENE_MEASURED_TOTAL,
 } from '../data/sceneMeasured'
 import type { DeviceSpec } from '../types'
-import { DataSource } from './DataSource'
 import { formatPower } from '@/lib/format'
 
 const BY_AVERAGE = [
@@ -60,7 +59,6 @@ export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
           </p>
         </div>
       </div>
-      <DataSource groupId={group.id} device={device} />
       {!device && (
         <div className="divide-y divide-rule border-t border-rule">
           {BY_AVERAGE.map((item) => (

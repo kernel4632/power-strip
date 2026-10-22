@@ -58,9 +58,3 @@ export interface DeviceState {
   energyWh: number
   powerSource: PowerSource
 }
-export interface PowerSample {
-  time: number
-  total: number
-  devices: Record<DeviceId, number>
-  stations: Record<StationId, number>
-}

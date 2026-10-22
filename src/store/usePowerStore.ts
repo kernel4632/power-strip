@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import {
   DEVICE_CATALOG,
   DEVICE_MAP,
-  STATIONS,
   deviceReading,
 } from '../data/catalog'
 import type {
@@ -10,7 +9,6 @@ import type {
   DeviceId,
   DeviceState,
   InspectionPart,
-  PowerSample,
   SceneMode,
   Selection,
   StationId,
@@ -41,7 +39,6 @@ interface PowerState {
   setPanelExpanded: (expanded: boolean) => void
   activeStation: StationId | null
   cutaway: boolean
-  history: PowerSample[]
   sessionSeconds: number
   masterOn: boolean
   mode: SceneMode
@@ -99,7 +96,6 @@ export const usePowerStore = create<PowerState>()((set) => ({
   setPanelExpanded: (panelExpanded) => set({ panelExpanded }),
   activeStation: null,
   cutaway: true,
-  history: [],
   sessionSeconds: 0,
   masterOn: true,
   mode: 'study',
@@ -225,7 +221,7 @@ export const usePowerStore = create<PowerState>()((set) => ({
   toggleFlow: () => set((state) => ({ energyFlow: !state.energyFlow })),
   toggleLabels: () => set((state) => ({ labels: !state.labels })),
   toggleRotate: () => set((state) => ({ autoRotate: !state.autoRotate })),
-  tick: (seconds, now) =>
+  tick: (seconds, _now) =>
     set((state) => {
       const dt = Math.min(
         Math.max(Number.isFinite(seconds) ? seconds : 0, 0),
@@ -233,11 +229,6 @@ export const usePowerStore = create<PowerState>()((set) => ({
       )
       const elapsed = state.sessionSeconds + dt
       const devices = { ...state.devices }
-      const readings = {} as Record<DeviceId, number>
-      const stations = Object.fromEntries(
-        STATIONS.map((s) => [s.id, 0]),
-      ) as Record<StationId, number>
-      let scene = 0
       DEVICE_CATALOG.forEach((spec) => {
         const device = state.devices[spec.id]
         const powered = state.masterOn && state.strips[spec.stationId]
@@ -255,22 +246,10 @@ export const usePowerStore = create<PowerState>()((set) => ({
           energyWh:
             device.energyWh + (((device.watts + watts) / 2) * dt) / 3600,
         }
-        readings[spec.id] = watts
-        stations[spec.stationId] += watts
-        scene += watts
       })
       return {
         devices,
         sessionSeconds: elapsed,
-        history: [
-          ...state.history,
-          {
-            time: now,
-            total: scene,
-            devices: readings,
-            stations,
-          },
-        ].slice(-90),
       }
     }),
 }))

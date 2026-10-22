@@ -75,7 +75,7 @@ try {
   store.getState().setMaster(false)
   assert.ok(Object.values(store.getState().devices).every(d=>d.watts===0))
   store.getState().tick(0, now)
-  assert.equal(store.getState().history.at(-1).total,0)
+  assert.equal(Object.values(store.getState().devices).reduce((sum,d) => sum+d.watts,0), 0)
   store.getState().setStrip('s1',true)
   assert.equal(store.getState().devices[target].watts,0)
   store.getState().setMaster(true)

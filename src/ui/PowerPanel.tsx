@@ -37,7 +37,6 @@ import {
 import { usePowerStore } from '../store/usePowerStore'
 import type { DeviceId, StationId } from '../types'
 import { MeasuredLoad } from './MeasuredLoad'
-import { PowerChart } from './PowerChart'
 
 export function PowerPanel() {
   const state = usePowerStore()
@@ -295,16 +294,6 @@ export function PowerPanel() {
                         </div>
                       </section>
                     )}
-                    <section className="space-y-1">
-                      <h3 className="text-body text-muted-foreground">
-                        本次功率
-                      </h3>
-                      <PowerChart
-                        history={state.history}
-                        device={spec?.id}
-                        station={station?.id}
-                      />
-                    </section>
                     <div className="grid grid-cols-2 gap-4 border-t border-rule pt-4">
                       <div>
                         <p className="text-body text-muted-foreground">
