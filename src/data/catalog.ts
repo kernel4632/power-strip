@@ -10,8 +10,9 @@ import type {
   StationSpec,
 } from '../types'
 import { MEASURED_MAP } from './measured'
+import { DESK_STRIP } from './strips'
+import { measuredIndex } from '../lib/measuredTime'
 
-export const CIRCUIT_LIMIT = 2200
 export const VOLTAGE = 220
 export const DESK_TOP = 0.86
 export const STRIP_LOCAL: Point3 = [-0.3, 0.886, -0.405]
@@ -25,7 +26,7 @@ export const STATIONS: StationSpec[] = [
     lightColor: '#bbd3c2',
     position: [-1.91, 0, -1.55],
     rotation: Math.PI / 2,
-    limit: 800,
+    limit: DESK_STRIP.maxW,
   },
   {
     id: 's2',
@@ -36,7 +37,7 @@ export const STATIONS: StationSpec[] = [
     lightColor: '#dfbea3',
     position: [-1.91, 0, 1.25],
     rotation: Math.PI / 2,
-    limit: 800,
+    limit: DESK_STRIP.maxW,
   },
   {
     id: 's3',
@@ -47,7 +48,7 @@ export const STATIONS: StationSpec[] = [
     lightColor: '#c4cce2',
     position: [1.91, 0, -1.55],
     rotation: -Math.PI / 2,
-    limit: 800,
+    limit: DESK_STRIP.maxW,
   },
   {
     id: 's4',
@@ -58,7 +59,7 @@ export const STATIONS: StationSpec[] = [
     lightColor: '#d9d1ad',
     position: [1.91, 0, 1.25],
     rotation: -Math.PI / 2,
-    limit: 800,
+    limit: DESK_STRIP.maxW,
   },
 ]
 export const STATION_MAP = Object.fromEntries(
@@ -73,217 +74,41 @@ export function toWorld(station: StationSpec, local: Point3): Point3 {
     station.position[2] - local[0] * s + local[2] * c,
   ]
 }
-const descriptions: Record<DeviceKind, [string, string, number, number]> = {
-  monitor: ['桌面显示器', 'STUDIO DISPLAY', 38, 0.5],
-  laptop: ['笔记本电脑', 'PERSONAL LAPTOP', 65, 2],
-  lamp: ['护眼阅读灯', 'TASK LIGHT', 9, 0],
-  fan: ['桌面循环扇', 'AIR CIRCULATOR', 25, 0],
-  phone: ['手机充电座', 'WIRELESS CHARGER', 15, 0.3],
-  tower: ['台式主机', 'COMPACT PC', 280, 1],
-  speaker: ['桌面音箱', 'DESKTOP AUDIO', 12, 0.4],
-  tablet: ['绘图平板', 'PEN DISPLAY', 24, 0.3],
-  printer: ['桌面打印机', 'COMPACT PRINTER', 45, 1],
-  humidifier: ['小型加湿器', 'AIR & COMFORT', 18, 0],
-  headphones: ['耳机充电架', 'HEADPHONE DOCK', 8, 0.2],
+/** Group records are allocated equally because the source has no per-device traces. */
+export function measuredWatts(group: string, units: number, at: Date): number {
+  return MEASURED_MAP[group].series[measuredIndex(at)] / units
 }
-/**
- * 场景里的哪类设备对应实测表里的哪一组，以及该组记录的是几台。
- * 实测表按「设备组合计功率」记录，额定值取该组峰值除以台数。
- * 显示器、风扇、音箱、打印机、加湿器、耳机架没有对应记录，保持示意值。
- */
-const measuredKinds: Partial<
-  Record<DeviceKind, { group: string; units: number }>
-> = {
-  phone: { group: 'iphone', units: 2 },
-  tablet: { group: 'tablet', units: 2 },
-  laptop: { group: 'macbook', units: 2 },
-  tower: { group: 'gaming', units: 2 },
-  lamp: { group: 'lamp', units: 4 },
-}
-/**
- * 实测按十分钟一格记录，直接在格与格之间跳会画出直角阶梯。
- * 这里换算成格内进度，供相邻两格做线性过渡。
- */
-function intervalPosition(at: Date): number {
-  const minutes =
-    at.getHours() * 60 + at.getMinutes() + at.getSeconds() / 60
-  return Math.min(143, minutes / 10)
+export function deviceReading(spec: DeviceSpec, at: Date): { watts: number; source: PowerSource } {
+  return { watts: measuredWatts(spec.measuredGroup, spec.measuredUnits, at), source: 'allocated' }
 }
 
-function sample(series: number[] | undefined, position: number): number {
-  if (!series || series.length === 0) return 0
-  const low = Math.min(Math.floor(position), series.length - 1)
-  const high = Math.min(low + 1, series.length - 1)
-  const t = position - low
-  const a = series[low] ?? 0
-  const b = series[high] ?? a
-  return a + (b - a) * t
-}
-
-/** 单台设备在指定时刻的功率；没有实测映射时返回 null。 */
-export function measuredWatts(
-  group: string | undefined,
-  units: number | undefined,
-  at: Date,
-): number | null {
-  if (!group || !units) return null
-  const series = MEASURED_MAP[group]?.series
-  if (!series) return null
-  return sample(series, intervalPosition(at)) / units
-}
-
-/**
- * 设备在指定时刻该显示多少瓦。
- * 优先用该时刻的实测读数；实测为 0（那一刻没用电）时退回该组平均值，
- * 避免设备明明开着却显示 0 W；没有实测映射的设备用示意值。
- */
-export function deviceReading(
-  spec: DeviceSpec,
-  at: Date,
-): { watts: number; source: PowerSource } {
-  const measured = measuredWatts(spec.measuredGroup, spec.measuredUnits, at)
-  if (measured !== null && measured > 0.05) {
-    return { watts: measured, source: 'measured' }
-  }
-  if (spec.typicalWatts !== undefined) {
-    return { watts: spec.typicalWatts, source: 'typical' }
-  }
-  return { watts: spec.ratedWatts, source: 'nominal' }
-}
 type Placement = {
-  kind: DeviceKind
-  position: Point3
-  scale: number
-  footprint: [number, number]
-  height: number
-  port: Point3
-  on: boolean
+  kind: DeviceKind; group: string; name: string; position: Point3; scale: number
+  footprint: [number, number]; height: number; port: Point3
 }
-const main = (kind: 'monitor' | 'laptop' | 'tablet'): Placement => ({
-  kind,
-  position: [-0.35, DESK_TOP, -0.075],
-  scale: kind === 'monitor' ? 0.51 : 0.62,
-  footprint: kind === 'monitor' ? [0.57, 0.19] : [0.51, 0.36],
-  height: kind === 'monitor' ? 0.47 : 0.33,
-  port:
-    kind === 'monitor'
-      ? [0, 0.018, -0.066]
-      : kind === 'laptop'
-        ? [0, 0.01, -0.16]
-        : [0, 0.012, -0.096],
-  on: true,
-})
-const right = (kind: 'lamp' | 'fan'): Placement => ({
-  kind,
-  position: [0.4, DESK_TOP, -0.13],
-  scale: 0.47,
-  footprint: kind === 'lamp' ? [0.33, 0.24] : [0.26, 0.22],
-  height: 0.37,
-  port: [0, 0.02, -0.08],
-  on: kind === 'lamp',
-})
-const left = (kind: 'phone' | 'speaker' | 'humidifier'): Placement => ({
-  kind,
-  position: [-0.94, DESK_TOP, -0.12],
-  scale: 0.55,
-  footprint: [0.19, 0.21],
-  height: kind === 'phone' ? 0.06 : 0.27,
-  port: [
-    0,
-    kind === 'phone' ? 0.009 : 0.02,
-    kind === 'speaker' ? -0.059 : kind === 'phone' ? -0.07 : -0.075,
-  ],
-  on: kind !== 'humidifier',
-})
-const inventories: Record<StationId, Placement[]> = {
-  s1: [
-    main('monitor'),
-    right('lamp'),
-    left('phone'),
-    {
-      kind: 'tower',
-      position: [-0.94, 0.13, -0.1],
-      scale: 1,
-      footprint: [0.29, 0.43],
-      height: 0.53,
-      port: [0, 0.1, -0.22],
-      on: true,
-    },
-  ],
-  s2: [
-    main('laptop'),
-    right('fan'),
-    left('speaker'),
-    {
-      kind: 'headphones',
-      position: [0.93, 1.1685, -0.12],
-      scale: 0.82,
-      footprint: [0.25, 0.25],
-      height: 0.32,
-      port: [0, 0.008, -0.09],
-      on: false,
-    },
-  ],
-  s3: [
-    main('tablet'),
-    right('lamp'),
-    left('phone'),
-    {
-      kind: 'printer',
-      position: [-0.94, 0.25, -0.05],
-      scale: 0.8,
-      footprint: [0.4, 0.36],
-      height: 0.25,
-      port: [0, 0.06, -0.162],
-      on: false,
-    },
-  ],
-  s4: [
-    main('laptop'),
-    right('fan'),
-    left('humidifier'),
-    {
-      kind: 'speaker',
-      position: [0.93, 1.1685, -0.12],
-      scale: 0.7,
-      footprint: [0.21, 0.25],
-      height: 0.32,
-      port: [0, 0.03, -0.077],
-      on: true,
-    },
-  ],
+function inventory(station: StationSpec): Placement[] {
+  const mac = station.id === 's2' || station.id === 's4'
+  const items: Placement[] = [
+    { kind: 'laptop', group: mac ? 'macbook' : 'gaming', name: mac ? 'MacBook' : '游戏笔记本',
+      position: [-0.35, DESK_TOP, -0.075], scale: 0.62, footprint: [0.51, 0.36], height: 0.33, port: [0, 0.01, -0.16] },
+    { kind: 'lamp', group: 'lamp', name: '台灯', position: [0.4, DESK_TOP, -0.13], scale: 0.47,
+      footprint: [0.33, 0.24], height: 0.37, port: [0, 0.02, -0.08] },
+    { kind: 'phone', group: mac ? 'android' : 'iphone', name: mac ? '安卓手机' : 'iPhone',
+      position: [-0.94, DESK_TOP, -0.12], scale: 0.55, footprint: [0.19, 0.21], height: 0.06, port: [0, 0.009, -0.07] },
+  ]
+  if (!mac) items.push({ kind: 'tablet', group: 'tablet', name: '平板电脑',
+    position: [0.16, DESK_TOP, 0.17], scale: 0.42, footprint: [0.32, 0.25], height: 0.19, port: [0, 0.012, -0.096] })
+  return items
 }
-export const DEVICE_CATALOG: DeviceSpec[] = STATIONS.flatMap((station) =>
-  inventories[station.id].map((p, socket) => {
-    const [name, english, fallbackRated, standbyWatts] = descriptions[p.kind]
-    const mapping = measuredKinds[p.kind]
-    const group = mapping ? MEASURED_MAP[mapping.group] : undefined
-    const ratedWatts = group
-      ? Math.round((group.peakW / mapping!.units) * 10) / 10
-      : fallbackRated
-    const typicalWatts = group
-      ? Math.round((group.avgW / mapping!.units) * 10) / 10
-      : undefined
+export const DEVICE_CATALOG: DeviceSpec[] = STATIONS.flatMap(station =>
+  inventory(station).map((p, socket) => {
+    const group = MEASURED_MAP[p.group]
     return {
-      id: `${station.id}-${p.kind}` as DeviceId,
-      stationId: station.id,
-      kind: p.kind,
-      name,
-      english,
-      ratedWatts,
-      typicalWatts,
-      standbyWatts,
-      measuredGroup: group?.id,
-      measuredUnits: mapping?.units,
-      color: station.color,
-      localPosition: p.position,
-      position: toWorld(station, p.position),
-      scale: p.scale,
-      socket,
-      footprint: p.footprint,
-      height: p.height,
-      cablePort: p.port,
-      defaultOn: p.on,
+      id: `${station.id}-${p.kind}` as DeviceId, stationId: station.id, kind: p.kind,
+      name: p.name, english: p.group.toUpperCase(), referenceWatts: group.peakW / group.units,
+      measuredGroup: group.id, measuredUnits: group.units,
+      color: station.color, localPosition: p.position, position: toWorld(station, p.position),
+      scale: p.scale, socket, footprint: p.footprint, height: p.height, cablePort: p.port, defaultOn: true,
     }
   }),
 )

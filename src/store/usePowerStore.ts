@@ -30,7 +30,7 @@ function initialDevices(): Record<DeviceId, DeviceState> {
         {
           on: d.defaultOn,
           level: 1,
-          watts: d.defaultOn ? reading.watts : d.standbyWatts,
+          watts: d.defaultOn ? reading.watts : 0,
           energyWh: 0,
           powerSource: reading.source,
         },
@@ -218,11 +218,8 @@ export const usePowerStore = create<PowerState>()((set) => ({
           ? 0
           : device.on
             ? reading.watts * device.level
-            : spec.standbyWatts
-        const watts =
-          !powered || !device.on
-            ? target
-            : device.watts + (target - device.watts) * (1 - Math.exp(-dt * 2.5))
+            : 0
+        const watts = target
         devices[spec.id] = {
           ...device,
           watts,

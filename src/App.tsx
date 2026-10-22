@@ -228,10 +228,10 @@ export default function App() {
               'absolute bottom-4 left-4 z-20 w-44 gap-3 bg-linear-to-br from-card to-secondary py-4 md:bottom-4 md:w-56',
               panelOpen && 'hidden',
             )}
-            aria-label="全寝功率概览"
+            aria-label="场景设备功率概览"
           >
             <CardHeader className="gap-2 px-4">
-              <CardTitle className="text-sm">全寝功率</CardTitle>
+              <CardTitle className="text-sm">场景设备功率</CardTitle>
               <CardTitle className="text-3xl tabular-nums">
                 {total.toFixed(0)}{' '}
                 <span className="text-sm font-normal">

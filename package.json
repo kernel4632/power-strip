@@ -11,6 +11,7 @@
     "typecheck": "tsc -b",
     "lint": "node scripts/check-ui.mjs && oxlint",
     "check:ui": "node scripts/check-ui.mjs",
+    "check:data": "node scripts/check-data.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

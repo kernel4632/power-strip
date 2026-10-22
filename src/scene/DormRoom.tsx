@@ -392,45 +392,12 @@ function DeskStructure({ station }: { station: StationSpec }) {
             )}
           </group>
         )}
-        {station.id === 's1' && (
-          <group>
-            <Box
-              size={[0.43, 0.019, 0.135]}
-              position={[-0.35, 0.871, 0.18]}
-              color="#e3e1d0"
-              round={0.006}
-            />
-            {Array.from({ length: 3 }, (_, r) =>
-              Array.from({ length: 12 }, (_, c) => (
-                <Box
-                  key={`${r}-${c}`}
-                  size={[0.026, 0.003, 0.026]}
-                  position={[-0.535 + c * 0.033, 0.883, 0.138 + r * 0.037]}
-                  color={(r + c) % 9 === 0 ? station.color : '#bac7bb'}
-                />
-              )),
-            )}
-            <Sphere
-              position={[0.07, 0.883, 0.19]}
-              scale={[0.033, 0.017, 0.05]}
-              color="#d7ddd0"
-            />
-          </group>
-        )}
-        {station.id !== 's1' && (
+        {(station.id === 's2' || station.id === 's4') && (
           <Box
             size={[0.15, 0.012, 0.12]}
             position={[0.08, 0.866, 0.19]}
             rotation={[0, 0.09, 0]}
             color={PAPER}
-          />
-        )}
-        {station.id === 's3' && (
-          <Rod
-            from={[0.04, 0.874, 0.1]}
-            to={[0.16, 0.874, 0.21]}
-            radius={0.004}
-            color="#586772"
           />
         )}
         <Cylinder

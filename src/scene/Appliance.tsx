@@ -756,11 +756,12 @@ export function Appliance({ id }: { id: DeviceId }) {
     station = STATION_MAP[spec.stationId]
   const on = usePowerStore((s) => s.devices[id].on),
     level = usePowerStore((s) => s.devices[id].level)
+  const drawingPower = usePowerStore((s) => s.devices[id].watts > 0)
   const powered = usePowerStore((s) => s.masterOn && s.strips[spec.stationId]),
     selected = usePowerStore((s) => s.selected === id),
     select = usePowerStore((s) => s.select)
   const [hovered, setHovered] = useState(false),
-    active = on && powered
+    active = on && powered && drawingPower
   useEffect(() => {
     if (hovered) document.body.style.cursor = 'pointer'
     return () => {
