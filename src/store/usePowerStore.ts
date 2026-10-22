@@ -5,7 +5,6 @@ import {
   STATIONS,
   deviceReading,
 } from '../data/catalog'
-import { measuredIndex as intervalAt } from '../lib/measuredTime'
 import type {
   CameraView,
   DeviceId,
@@ -17,14 +16,10 @@ import type {
   StationId,
 } from '../types'
 
-/** 页面打开时所处的实测区间，用作设备功率的初值。 */
-const BOOT_AT = new Date()
-const BOOT_INDEX = intervalAt(BOOT_AT)
-
 function initialDevices(): Record<DeviceId, DeviceState> {
   return Object.fromEntries(
     DEVICE_CATALOG.map((d) => {
-      const reading = deviceReading(d, BOOT_AT)
+      const reading = deviceReading(d)
       return [
         d.id,
         {
@@ -47,8 +42,6 @@ interface PowerState {
   history: PowerSample[]
   sessionSeconds: number
   masterOn: boolean
-  /** 当前所处的实测十分钟区间序号 */
-  measuredIndex: number
   mode: SceneMode
   night: boolean
   energyFlow: boolean
@@ -75,6 +68,16 @@ interface PowerState {
   toggleRotate: () => void
   tick: (seconds: number, now: number) => void
 }
+/** Update readouts in the same transaction as switches and sliders. */
+function withPower(state: PowerState, changes: Partial<PowerState>): Partial<PowerState> {
+  const next = { ...state, ...changes }
+  const devices = Object.fromEntries(DEVICE_CATALOG.map(spec => {
+    const device = next.devices[spec.id]
+    const powered = next.masterOn && next.strips[spec.stationId] && device.on
+    return [spec.id, { ...device, watts: powered ? deviceReading(spec).watts * device.level : 0 }]
+  })) as Record<DeviceId, DeviceState>
+  return { ...changes, devices }
+}
 export const usePowerStore = create<PowerState>()((set) => ({
   devices: initialDevices(),
   strips: { s1: true, s2: true, s3: true, s4: true },
@@ -84,7 +87,6 @@ export const usePowerStore = create<PowerState>()((set) => ({
   history: [],
   sessionSeconds: 0,
   masterOn: true,
-  measuredIndex: BOOT_INDEX,
   mode: 'study',
   night: false,
   energyFlow: false,
@@ -117,14 +119,14 @@ export const usePowerStore = create<PowerState>()((set) => ({
     })),
   closePanel: () => set({ selected: null }),
   toggle: (id) =>
-    set((state) => ({
+    set((state) => withPower(state, {
       devices: {
         ...state.devices,
         [id]: { ...state.devices[id], on: !state.devices[id].on },
       },
     })),
   setLevel: (id, level) =>
-    set((state) => ({
+    set((state) => withPower(state, {
       devices: {
         ...state.devices,
         [id]: {
@@ -135,11 +137,11 @@ export const usePowerStore = create<PowerState>()((set) => ({
         },
       },
     })),
-  setMaster: (masterOn) => set({ masterOn }),
+  setMaster: (masterOn) => set((state) => withPower(state, { masterOn })),
   setStrip: (id, on) =>
-    set((state) => ({ strips: { ...state.strips, [id]: on } })),
+    set((state) => withPower(state, { strips: { ...state.strips, [id]: on } })),
   setMode: (mode) =>
-    set((state) => ({
+    set((state) => withPower(state, {
       mode,
       masterOn: true,
       strips: { s1: true, s2: true, s3: true, s4: true },
@@ -202,8 +204,6 @@ export const usePowerStore = create<PowerState>()((set) => ({
         5,
       )
       const elapsed = state.sessionSeconds + dt
-      const at = new Date(now)
-      const index = intervalAt(at)
       const devices = { ...state.devices }
       const readings = {} as Record<DeviceId, number>
       const stations = Object.fromEntries(
@@ -213,7 +213,7 @@ export const usePowerStore = create<PowerState>()((set) => ({
       DEVICE_CATALOG.forEach((spec) => {
         const device = state.devices[spec.id]
         const powered = state.masterOn && state.strips[spec.stationId]
-        const reading = deviceReading(spec, at)
+        const reading = deviceReading(spec)
         const target = !powered
           ? 0
           : device.on
@@ -233,7 +233,6 @@ export const usePowerStore = create<PowerState>()((set) => ({
       })
       return {
         devices,
-        measuredIndex: index,
         sessionSeconds: elapsed,
         history: [
           ...state.history,

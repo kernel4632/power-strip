@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -12,15 +11,14 @@ import { Separator } from '@/components/ui/separator'
 import { Sparkline } from '@/components/ui/sparkline'
 import { MEASURED_GROUPS, MEASURED_MAP, MEASURED_TIMES, MEASURED_TOTAL } from '../data/measured'
 import type { DeviceSpec } from '../types'
-import { measuredLabel } from '../lib/measuredTime'
 
 const BY_AVERAGE = [MEASURED_TOTAL, ...[...MEASURED_GROUPS].sort((a, b) => b.avgW - a.avgW)]
 
 /**
  * 原表 24 小时负荷。曲线是那一天的记录，不随开关变化；
- * 场景里的设备取的是「当前时刻」那一格的读数。
+ * 该历史记录不参与当前场景的电源开关控制。
  */
-export function MeasuredLoad({ index, device }: { index: number; device?: DeviceSpec }) {
+export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
   const [active, setActive] = useState<string>(BY_AVERAGE[0]?.id ?? '')
   const group = device ? MEASURED_MAP[device.measuredGroup] : BY_AVERAGE.find((item) => item.id === active) ?? MEASURED_TOTAL
   const divisor = device?.measuredUnits ?? 1
@@ -35,7 +33,6 @@ export function MeasuredLoad({ index, device }: { index: number; device?: Device
       <CardHeader className="gap-2 px-2">
         <div className="flex items-center justify-between gap-2">
           <CardTitle>24 小时记录</CardTitle>
-          <Badge variant="secondary">{measuredLabel(index)} · 10 分钟</Badge>
         </div>
         <CardDescription>{device ? `${device.name} · ${group.units} 台均分` : group.name}</CardDescription>
       </CardHeader>

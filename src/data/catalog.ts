@@ -11,7 +11,6 @@ import type {
 } from '../types'
 import { MEASURED_MAP } from './measured'
 import { DESK_STRIP } from './strips'
-import { measuredIndex } from '../lib/measuredTime'
 
 export const VOLTAGE = 220
 export const DESK_TOP = 0.86
@@ -74,12 +73,13 @@ export function toWorld(station: StationSpec, local: Point3): Point3 {
     station.position[2] - local[0] * s + local[2] * c,
   ]
 }
-/** Group records are allocated equally because the source has no per-device traces. */
-export function measuredWatts(group: string, units: number, at: Date): number {
-  return MEASURED_MAP[group].series[measuredIndex(at)] / units
-}
-export function deviceReading(spec: DeviceSpec, at: Date): { watts: number; source: PowerSource } {
-  return { watts: measuredWatts(spec.measuredGroup, spec.measuredUnits, at), source: 'allocated' }
+/** On-state power is the group's mean nonzero reading, equally allocated to its units.
+ * Historical zero intervals remain unchanged; the computer clock never controls a switch.
+ */
+export function deviceReading(spec: DeviceSpec): { watts: number; source: PowerSource } {
+  const values = MEASURED_MAP[spec.measuredGroup].series.filter(watts => watts > 0)
+  const watts = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length / spec.measuredUnits : 0
+  return { watts, source: 'allocated' }
 }
 
 type Placement = {
