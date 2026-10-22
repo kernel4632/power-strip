@@ -181,7 +181,7 @@ export function PowerPanel() {
                 className="mt-3 justify-center"
                 aria-label="详情内容"
               >
-                <TabsTrigger value="control">当前</TabsTrigger>
+                <TabsTrigger value="control">参考功率</TabsTrigger>
                 <TabsTrigger value="record">24小时记录</TabsTrigger>
               </TabsList>
             )}

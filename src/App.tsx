@@ -329,7 +329,7 @@ export default function App() {
           aria-label="打开全寝用电"
         >
           <span className="flex items-center justify-between gap-2 text-body text-muted-foreground">
-            全寝
+            全寝参考功率
             <ArrowUpRight className="size-3.5" />
           </span>
           <span className="mt-1 flex items-baseline gap-1.5 font-sans text-5xl font-medium tracking-tight tabular-nums">

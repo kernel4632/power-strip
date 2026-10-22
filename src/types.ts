@@ -50,7 +50,7 @@ export interface DeviceSpec {
   defaultOn: boolean
 }
 /** 功率读数的来源，决定界面上挂哪个徽章。 */
-export type PowerSource = 'allocated'
+export type PowerSource = 'nameplate'
 export interface DeviceState {
   on: boolean
   level: number

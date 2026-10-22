@@ -48,14 +48,19 @@ try {
   }
   near(total.energyWh, 21316.333333333332)
   assert.equal(total.peakW, 3190)
-  const expected = represented.reduce((sum,g) => sum+g.peakW,0)
+  // 100% load is each unit's nameplate figure, so the room total is a sum of ratings.
+  const nameplate = g => g.units * Number.parseFloat(refMap[g.id].referencePower)
+  const expected = represented.reduce((sum,g) => sum+nameplate(g),0)
+  // Ratings may be summed; coincident peaks may not. 804 W vs the 590 W recorded peak is by design.
+  assert.equal(expected, 804)
+  assert.ok(expected > sceneTotal.peakW)
   assert.ok(Object.values(store.getState().devices).every(d => d.watts > 0))
   for (let i=0; i<144; i++) {
     near(groups.reduce((sum,g) => sum+g.series[i],0), total.series[i])
     near(represented.reduce((sum,g) => sum+g.series[i],0), sceneTotal.series[i])
     store.getState().tick(0, at(i).getTime())
     near(Object.values(store.getState().devices).reduce((sum,d) => sum+d.watts,0), expected)
-    for (const g of represented) near(devices.filter(d=>d.measuredGroup===g.id).reduce((sum,d)=>sum+deviceReading(d).watts,0),g.peakW)
+    for (const g of represented) near(devices.filter(d=>d.measuredGroup===g.id).reduce((sum,d)=>sum+deviceReading(d).watts,0),nameplate(g))
   }
   // Even the formerly all-zero 11:40 interval leaves every switch-on model powered.
   store.getState().tick(0, Date.parse('2026-10-22T11:40:00+08:00'))
@@ -84,15 +89,15 @@ try {
   assert.ok(Object.values(store.getState().devices).every(d=>d.watts===0))
   store.getState().setMode('study')
   assert.ok(Object.values(store.getState().devices).every(d=>d.watts>0))
-  // Regression: the two MacBooks have a 60 W recorded group peak, not a 6.5 W full-load reference.
-  near(store.getState().devices['s2-laptop'].watts,30)
-  near(store.getState().devices['s4-laptop'].watts,30)
+  // Regression: a MacBook runs at its 35 W nameplate, not the group's 30 W per-unit recorded peak.
+  near(store.getState().devices['s2-laptop'].watts,35)
+  near(store.getState().devices['s4-laptop'].watts,35)
   store.getState().setLevel('s2-laptop',0.5)
-  near(store.getState().devices['s2-laptop'].watts,15)
-  near(store.getState().devices['s4-laptop'].watts,30)
+  near(store.getState().devices['s2-laptop'].watts,17.5)
+  near(store.getState().devices['s4-laptop'].watts,35)
   store.getState().setLevel('s2-laptop',1)
-  near(store.getState().devices['s2-laptop'].watts,30)
+  near(store.getState().devices['s2-laptop'].watts,35)
   store.getState().toggle('s2-laptop')
   assert.equal(store.getState().devices['s2-laptop'].watts,0)
-  console.log('Data checks passed: workbook provenance, scene-only scope (6 groups / 14 devices), 3.361167 kWh / 590 W historical peak, 144 intervals, peak allocation, clock independence, immediate switches, MacBook 100%/50%/off and session energy.')
+  console.log('Data checks passed: workbook provenance, scene-only scope (6 groups / 14 devices), 3.361167 kWh / 590 W historical peak, 144 intervals, nameplate allocation, clock independence, immediate switches, MacBook 100%/50%/off and session energy.')
 } finally { await server.close() }
