@@ -1,6 +1,6 @@
 # UI 组件与主题规范
 
-所有二维 UI 必须使用 shadcn/ui 官方组件。业务文件只负责数据、交互和 Tailwind 布局组合，禁止自行实现 Button、Switch、Slider、Tooltip、图表或抽屉等控件，禁止恢复旧的控件 CSS。新增组件通过官方 CLI 选择。
+二维交互控件使用 shadcn/ui 官方组件。业务文件只负责数据、交互和 Tailwind 布局组合，禁止自行实现 Button、Switch、Slider、Tooltip、图表或抽屉等控件，禁止恢复旧的控件 CSS。新增交互组件通过官方 CLI 选择。按用户要求引入的 Liquid Glass 只作为装饰材质，不接管控件行为。
 
 ## 来源
 
@@ -37,7 +37,15 @@
 | Progress | 数据变化时更新填充长度与状态色 | `--motion-panel`：280 ms |
 | 日夜按钮 | 切换时图标旋转 | 280 ms |
 
-统一缓动来自 `--ease-ui`。数值直接显示实际采样结果，不做反复滚字或虚假的计数动画。功率卡片使用 `from-card to-secondary` 的静态渐变；其余面板分区以留白为主，减少嵌套边框。配色、间距仍来自全局 Tailwind 变量。`prefers-reduced-motion: reduce` 关闭二维动画与过渡；手机详情切换仅淡入，不增加空间位移，也不添加鼠标专属效果。
+统一缓动来自 `--ease-ui`。数值直接显示实际采样结果，不做反复滚字或虚假的计数动画。场景悬浮卡使用玻璃材质，详情里的功率卡使用透明静态渐变；其余面板分区以留白为主。配色、间距仍来自全局 Tailwind 变量。`prefers-reduced-motion: reduce` 关闭二维动画与过渡；手机详情切换仅淡入，不增加空间位移，也不添加鼠标专属效果。
+
+### 透明玻璃材质（2026-10-22）
+
+- 使用 [rdev/liquid-glass-react](https://github.com/rdev/liquid-glass-react) 的 npm 版本 `1.1.1`。`GlassSurface` 只包裹顶栏三个按钮、场景工具栏和功率卡，折射层设为 `aria-hidden`、`pointer-events: none`，按钮与 Radix 触发器仍直接关联。
+- 禁用库的鼠标牵引与弹性位移。ResizeObserver 在尺寸稳定后重新测量，适应功率卡展开、窗口改变和手机横向工具栏。
+- 长列表、详情 Sheet 与 Popover 使用 CSS 透明磨砂，避免大面积叠加 SVG 折射。选中、悬停、焦点使用独立状态色；开关和滑块保留清晰的实色滑块。
+- 日夜透明度、边缘高光、阴影、模糊半径均在 `index.css` 的 `glass-*` token 中定义；只有材质适配器使用库必需的定位参数。业务代码不写内联样式。
+- Safari / Firefox 的折射支持不完整，沿用库的降级；不支持 backdrop-filter 或用户要求减少透明时使用实色底。减少动态效果设置继续生效。
 
 ### 设计参考（2026-10-20）
 
@@ -51,7 +59,7 @@
 
 ## 全局变量
 
-`src/index.css` 只包含 Tailwind 导入、主题映射、`:root` / `.dark` 变量及基础 reset；不添加组件选择器。默认使用 shadcn neutral 主题。
+`src/index.css` 只包含 Tailwind 导入、主题映射、`:root` / `.dark` 变量、能力与偏好降级及基础 reset；不添加组件选择器。以 shadcn neutral 为底，叠加透明玻璃语义变量。
 
 - 配色：`background`、`foreground`、`card`、`muted`、`primary`、`border`、`ring`、`chart-*` 等语义变量。
 - 间距与布局尺寸：标准 `p-4`、`gap-2`、`w-96` 等工具类，统一从 Tailwind `--spacing` 派生。不得使用 `p-[13px]` 或局部 style 定义间距。
@@ -60,7 +68,7 @@
 - 明暗主题在 HTML 根元素切换 `.dark`，包括所有 Portal 内容。
 - 移动断点读取全局 `--breakpoint-md`，与 Tailwind `md:` 保持一致。
 
-官方源码仅做了必要的主题及可访问性接入：固定 white/black 替换为语义颜色，少量 px/rem 尺寸替换为标准工具类或全局变量，Slider 将可访问名称传到 Thumb，Progress 向 Root 传递数值，移动 hook 读取全局断点。没有添加自制控件皮肤。更新官方组件后需重新核对这些适配。MIT 许可保存在 `docs/third-party/shadcn-ui-LICENSE.md`。
+官方源码保留交互与语义，接入项目主题及可访问性：固定 white/black 替换为语义颜色，少量 px/rem 尺寸替换为标准工具类或全局变量，Slider 将可访问名称传到 Thumb，Progress 向 Root 传递数值，移动 hook 读取全局断点。Button、Card、Popover、Sheet 与 Toggle 接入玻璃主题；更新官方组件后需重新核对这些适配。MIT 许可保存在 `docs/third-party/shadcn-ui-LICENSE.md`。
 
 图表是唯一例外：官方 Chart 组件依赖 Recharts，单个 60 点曲线的分包为 324 kB（gzip 97 kB），只为了画一条折线。`src/components/ui/sparkline.tsx` 用归一化 viewBox、非缩放描边和自适应纵轴实现同一件事，约 150 行、无运行时依赖。它不是业务文件里的手写 SVG，而是和官方组件同级的受控原语：样式只用 Tailwind 语义类，纵轴随数据留白，悬浮读数走 Popover 同款语义色。若后续需要堆叠柱、饼图或多序列对比，应重新评估是否引入图表库，而不是在 Sparkline 上继续加功能。
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'vite'
 
-const server = await createServer({ configFile: false, server: { middlewareMode: true } })
+const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true } })
 try {
   const { MEASURED_GROUPS: groups, MEASURED_TOTAL: total } = await server.ssrLoadModule('/src/data/measured.ts')
   const { DEVICE_CATALOG: devices, STATIONS, deviceReading } = await server.ssrLoadModule('/src/data/catalog.ts')

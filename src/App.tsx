@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { GlassSurface } from '@/components/ui/glass-surface'
 import {
   Card,
   CardContent,
@@ -183,39 +184,47 @@ export default function App() {
             panelOpen && 'md:right-100',
           )}
         >
-          <Button
-            variant="outline"
-            className="pointer-events-auto h-auto gap-3 py-2"
-            aria-label="返回四人寝全景"
-            onClick={() => state.setView('overview')}
-          >
-            <Home />
-            宿舍
-          </Button>
-          <div className="pointer-events-auto flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={state.toggleNight}
-                  aria-label={state.night ? '切换日间场景' : '切换夜间场景'}
-                >
-                  <SunMoon className={cn('transition-transform duration-(--motion-panel) ease-ui', state.night && 'rotate-180')} />
-                </Button>
-              </TooltipTrigger>              <TooltipContent>日夜切换 · L</TooltipContent>
-            </Tooltip>
+          <GlassSurface className="pointer-events-auto rounded-full">
             <Button
-              variant="outline"
-              onClick={() =>
-                state.select(state.selected === 'room' ? null : 'room')
-              }
-              aria-label="全寝能源面板"
-              aria-expanded={state.selected === 'room'}
+              variant="glass"
+              className="h-10 gap-3 px-4"
+              aria-label="返回四人寝全景"
+              onClick={() => state.setView('overview')}
             >
-              <ChartNoAxesCombined />
-              <span className="hidden sm:inline">能源概览</span>
+              <Home />
+              宿舍
             </Button>
+          </GlassSurface>
+          <div className="pointer-events-auto flex items-center gap-2">
+            <GlassSurface className="rounded-full">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="glass"
+                    size="icon-lg"
+                    onClick={state.toggleNight}
+                    aria-label={state.night ? '切换日间场景' : '切换夜间场景'}
+                  >
+                    <SunMoon className={cn('transition-transform duration-(--motion-panel) ease-ui', state.night && 'rotate-180')} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>日夜切换 · L</TooltipContent>
+              </Tooltip>
+            </GlassSurface>
+            <GlassSurface className="rounded-full">
+              <Button
+                variant="glass"
+                className="h-10"
+                onClick={() =>
+                  state.select(state.selected === 'room' ? null : 'room')
+                }
+                aria-label="全寝能源面板"
+                aria-expanded={state.selected === 'room'}
+              >
+                <ChartNoAxesCombined />
+                <span className="hidden sm:inline">能源概览</span>
+              </Button>
+            </GlassSurface>
           </div>
         </header>
         <Collapsible
@@ -223,9 +232,9 @@ export default function App() {
           onOpenChange={setExpandedEnergy}
           asChild
         >
-          <Card
+          <GlassSurface
             className={cn(
-              'absolute bottom-4 left-4 z-20 w-44 gap-3 bg-linear-to-br from-card to-secondary py-4 md:bottom-4 md:w-56',
+              'absolute bottom-4 left-4 z-20 flex w-44 flex-col gap-3 py-4 md:bottom-4 md:w-56',
               panelOpen && 'hidden',
             )}
             aria-label="场景设备功率概览"
@@ -268,9 +277,9 @@ export default function App() {
                 </div>
               </CollapsibleContent>
             </CardContent>
-          </Card>
+          </GlassSurface>
         </Collapsible>
-        <Card
+        <GlassSurface
           className={cn(
             'absolute right-4 top-20 z-30 gap-2 p-2 md:top-1/2 md:-translate-y-1/2',
             panelOpen && 'md:right-100',
@@ -406,7 +415,7 @@ export default function App() {
               </PopoverContent>
             </Popover>
           </nav>
-        </Card>
+        </GlassSurface>
         <PowerPanel />
       </main>
     </TooltipProvider>
