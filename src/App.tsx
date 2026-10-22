@@ -42,7 +42,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { cn } from '@/lib/utils'
-import { formatEnergy } from '@/lib/format'
+import { formatEnergy, formatPower } from '@/lib/format'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
   CAMERA_VIEWS,
@@ -153,8 +153,10 @@ export default function App() {
       <main className="relative isolate h-dvh overflow-hidden bg-background text-foreground">
         <div
           className={cn(
-            'absolute inset-0',
-            panelOpen && 'max-md:bottom-1/2 md:right-96',
+            'absolute bottom-3 left-3 right-3 top-16 overflow-hidden rounded-xl border',
+            panelOpen && 'md:right-94',
+            panelOpen &&
+              (state.panelExpanded ? 'max-md:bottom-3/4' : 'max-md:bottom-1/2'),
           )}
         >
           <SceneBoundary>
@@ -176,45 +178,52 @@ export default function App() {
               <Scene />
             </Suspense>
           </SceneBoundary>
+          <Hotspots />
         </div>
-        <Hotspots />
         <header
           className={cn(
-            'pointer-events-none absolute inset-x-4 top-4 z-30 flex flex-wrap items-center justify-between gap-2 md:gap-4',
-            panelOpen && 'md:right-100',
+            'pointer-events-none absolute inset-x-3 top-0 z-30 flex h-16 items-center justify-between gap-2',
           )}
         >
-          <GlassSurface className="pointer-events-auto rounded-full">
+          <div className="pointer-events-auto flex items-center gap-5">
             <Button
-              variant="glass"
-              className="h-10 gap-3 px-4"
+              variant="ghost"
+              className="gap-2 px-1 text-primary md:gap-3"
               aria-label="返回四人寝全景"
               onClick={() => state.setView('overview')}
             >
               <Home />
-              宿舍
+              <h1 className="text-base font-semibold">宿舍用电观察</h1>
             </Button>
-          </GlassSurface>
+            <span className="hidden text-xs text-muted-foreground lg:inline">
+              四个床位，一起生活
+            </span>
+          </div>
           <div className="pointer-events-auto flex items-center gap-2">
-            <GlassSurface className="rounded-full">
+            <div>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant="glass"
+                    variant="ghost"
                     size="icon-lg"
                     onClick={state.toggleNight}
                     aria-label={state.night ? '切换日间场景' : '切换夜间场景'}
                   >
-                    <SunMoon className={cn('transition-transform duration-(--motion-panel) ease-ui', state.night && 'rotate-180')} />
+                    <SunMoon
+                      className={cn(
+                        'transition-transform duration-(--motion-panel) ease-ui',
+                        state.night && 'rotate-180',
+                      )}
+                    />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>日夜切换 · L</TooltipContent>
               </Tooltip>
-            </GlassSurface>
-            <GlassSurface className="rounded-full">
+            </div>
+            <div>
               <Button
-                variant="glass"
-                className="h-10"
+                variant="outline"
+                className="px-3"
                 onClick={() =>
                   state.select(state.selected === 'room' ? null : 'room')
                 }
@@ -222,9 +231,9 @@ export default function App() {
                 aria-expanded={state.selected === 'room'}
               >
                 <ChartNoAxesCombined />
-                <span className="hidden sm:inline">能源概览</span>
+                <span>全寝用电</span>
               </Button>
-            </GlassSurface>
+            </div>
           </div>
         </header>
         <Collapsible
@@ -232,61 +241,66 @@ export default function App() {
           onOpenChange={setExpandedEnergy}
           asChild
         >
-          <GlassSurface
+          <section
             className={cn(
-              'absolute bottom-4 left-4 z-20 flex w-44 flex-col gap-3 py-4 md:bottom-4 md:w-56',
+              'absolute bottom-7 left-7 z-20 flex w-52 flex-col gap-3 rounded-lg border bg-card/95 py-4 md:bottom-8 md:left-8 md:w-64',
               panelOpen && 'hidden',
             )}
             aria-label="场景设备功率概览"
           >
             <CardHeader className="gap-2 px-4">
-              <CardTitle className="text-sm">场景设备功率</CardTitle>
-              <CardTitle className="text-3xl tabular-nums">
-                {total.toFixed(0)}{' '}
-                <span className="text-sm font-normal">
-                  W
-                </span>
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                当前模拟 / 全寝功率
+              </CardTitle>
+              <CardTitle className="font-mono text-5xl font-normal tracking-tight text-primary md:text-6xl">
+                {formatPower(total)}{' '}
+                <span className="text-sm font-normal">W</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4">
               <CollapsibleTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="w-full"
+                  className="w-full justify-between rounded-none border-t px-0 text-xs"
                   aria-label={expandedEnergy ? '收起功率趋势' : '展开功率趋势'}
                 >
                   {expandedEnergy ? '收起趋势' : '查看趋势'}
-                  <ChevronDown className={cn('transition-transform duration-(--motion-control) ease-ui', expandedEnergy && 'rotate-180')} />
+                  <ChevronDown
+                    className={cn(
+                      'transition-transform duration-(--motion-control) ease-ui',
+                      expandedEnergy && 'rotate-180',
+                    )}
+                  />
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="overflow-hidden data-[state=open]:animate-disclosure-open data-[state=closed]:animate-disclosure-close">
                 <div className="space-y-3 pt-3">
-                <PowerChart history={state.history} compact />
-                <CardDescription className="tabular-nums">
-                  本次 {energyText.value} {energyText.unit}
-                </CardDescription>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => state.select('room')}
-                >
-                  查看用电详情
-                </Button>
+                  <PowerChart history={state.history} compact />
+                  <CardDescription className="tabular-nums">
+                    本次 {energyText.value} {energyText.unit}
+                  </CardDescription>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => state.select('room')}
+                  >
+                    查看用电详情
+                  </Button>
                 </div>
               </CollapsibleContent>
             </CardContent>
-          </GlassSurface>
+          </section>
         </Collapsible>
         <GlassSurface
           className={cn(
-            'absolute right-4 top-20 z-30 gap-2 p-2 md:top-1/2 md:-translate-y-1/2',
-            panelOpen && 'md:right-100',
+            'absolute right-5 top-20 z-30 rounded-md p-0 md:right-8 md:top-20',
+            panelOpen && 'md:right-98',
           )}
         >
           <nav
-            className="flex flex-row gap-2 md:flex-col"
+            className="flex flex-row divide-x divide-border"
             aria-label="场景工具"
           >
             <Popover
@@ -408,15 +422,20 @@ export default function App() {
                     </KbdGroup>
                     <span>能流 / 昼夜</span>
                   </div>
-                  <CardDescription>
-                    拖动旋转，滚轮缩放。
-                  </CardDescription>
+                  <CardDescription>拖动旋转，滚轮缩放。</CardDescription>
                 </div>
               </PopoverContent>
             </Popover>
           </nav>
         </GlassSurface>
-        <PowerPanel />
+        {!panelOpen && (
+          <p className="pointer-events-none absolute left-7 top-36 z-10 text-xs leading-relaxed text-muted-foreground md:left-8 md:top-24">
+            点选桌面，探索设备用电
+            <br />
+            <span className="hidden md:inline">拖动旋转 · 滚轮缩放</span>
+          </p>
+        )}
+        <PowerPanel key={state.selected ?? 'closed'} />
       </main>
     </TooltipProvider>
   )

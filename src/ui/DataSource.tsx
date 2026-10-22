@@ -12,7 +12,7 @@ export function DataSource({ groupId, device, strips = false }: {
   const reference = groupId ? DEVICE_REFERENCE_MAP[groupId] : undefined
   return <Collapsible>
     <CollapsibleTrigger asChild>
-      <Button variant="ghost" className="h-auto w-full justify-start px-0 text-xs text-muted-foreground">
+      <Button variant="ghost" className="min-h-11 w-full justify-start px-0 text-xs text-muted-foreground">
         数据来源与口径
       </Button>
     </CollapsibleTrigger>

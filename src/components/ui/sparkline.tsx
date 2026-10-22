@@ -1,10 +1,12 @@
 import { useId, useState } from 'react'
 import { cn } from 'cn'
+import { Slider } from './slider'
+import { formatPower } from '@/lib/format'
 
 export type SparklinePoint = { label: string; value: number }
 
 /**
- * 轻量折线／面积图。仅为 60 个采样点服务，因此不引入图表库：
+ * 轻量折线图，呈现本次 60 点与历史 144 点记录，不引入图表库：
  * 用 viewBox 归一化坐标 + non-scaling-stroke 保持线宽，纵轴按数据自适应并留白。
  */
 export function Sparkline({
@@ -20,7 +22,7 @@ export function Sparkline({
   label: string
   className?: string
 }) {
-  const gradientId = useId()
+  const summaryId = useId()
   const [active, setActive] = useState<number | null>(null)
   const count = data.length
 
@@ -57,23 +59,51 @@ export function Sparkline({
         `${index === 0 ? 'M' : 'L'}${x(index).toFixed(2)},${y(point.value).toFixed(2)}`,
     )
     .join(' ')
-  const area = `${line} L100,100 L0,100 Z`
   const activePoint = active === null ? null : data[active]
   const activeOffset = active === null ? 0 : x(active)
+  const readingIndex = Math.min(active ?? count - 1, count - 1)
+  const reading = data[readingIndex]
 
   return (
     <div
-      role="img"
+      role={compact ? 'img' : 'group'}
       aria-label={label}
+      aria-describedby={summaryId}
       className={cn(
         'relative w-full select-none',
-        compact ? 'h-16' : 'h-40',
+        compact ? 'h-16' : 'space-y-2',
         className,
       )}
     >
-      <div className={cn('h-full', !compact && 'grid grid-rows-[1fr_auto] pl-9')}>
+      <p id={summaryId} className="sr-only">
+        {data[0].label} 至 {data[count - 1].label}，最低 {formatPower(rawMin)}{' '}
+        {unit}，最高 {formatPower(rawMax)} {unit}。
+        {!compact && '可用下方时间滑块和方向键读取每个时间点。'}
+      </p>
+      <div
+        className={cn(
+          compact ? 'h-full' : 'grid h-40 grid-rows-[1fr_auto] pl-9',
+        )}
+      >
         <div
-          className={cn('relative', compact ? 'h-full' : 'min-h-0')}
+          className={cn('relative touch-pan-y', compact ? 'h-full' : 'min-h-0')}
+          onPointerDown={
+            compact
+              ? undefined
+              : (event) => {
+                  const rect = event.currentTarget.getBoundingClientRect()
+                  if (rect.width)
+                    setActive(
+                      Math.round(
+                        Math.max(
+                          0,
+                          Math.min(1, (event.clientX - rect.left) / rect.width),
+                        ) *
+                          (count - 1),
+                      ),
+                    )
+                }
+          }
           onPointerMove={
             compact
               ? undefined
@@ -87,7 +117,6 @@ export function Sparkline({
                   setActive(Math.round(ratio * (count - 1)))
                 }
           }
-          onPointerLeave={compact ? undefined : () => setActive(null)}
         >
           {!compact && (
             <div className="absolute inset-y-0 -left-9 flex w-8 flex-col justify-between text-right text-xs tabular-nums text-muted-foreground">
@@ -102,20 +131,6 @@ export function Sparkline({
             className="h-full w-full text-chart-2"
             aria-hidden="true"
           >
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="0%"
-                  stopColor="currentColor"
-                  stopOpacity={0.28}
-                />
-                <stop
-                  offset="100%"
-                  stopColor="currentColor"
-                  stopOpacity={0.02}
-                />
-              </linearGradient>
-            </defs>
             {!compact &&
               [0, 50, 100].map((offset) => (
                 <line
@@ -130,7 +145,6 @@ export function Sparkline({
                   vectorEffect="non-scaling-stroke"
                 />
               ))}
-            <path d={area} fill={`url(#${gradientId})`} />
             <path
               d={line}
               fill="none"
@@ -166,7 +180,7 @@ export function Sparkline({
               style={{ left: `${activeOffset}%` }}
             >
               <span className="tabular-nums">
-                {activePoint.value.toFixed(1)}
+                {formatPower(activePoint.value)}
                 {unit && ` ${unit}`}
               </span>
               <span className="ml-2 text-muted-foreground">
@@ -185,6 +199,25 @@ export function Sparkline({
           </div>
         )}
       </div>
+      {!compact && (
+        <div>
+          <div className="flex items-center justify-between gap-2 text-xs tabular-nums">
+            <span className="text-muted-foreground">{reading.label}</span>
+            <output className="font-mono text-primary">
+              {formatPower(reading.value)} {unit}
+            </output>
+          </div>
+          <Slider
+            min={0}
+            max={count - 1}
+            step={1}
+            value={[readingIndex]}
+            onValueChange={([value]) => setActive(value)}
+            aria-label={`${label}时间点`}
+            aria-valuetext={`${reading.label}，${formatPower(reading.value)} ${unit}`}
+          />
+        </div>
+      )}
     </div>
   )
 }

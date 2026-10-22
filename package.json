@@ -7,15 +7,18 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "prebuild:pages": "npm run check:data",
+    "prebuild:pages": "npm run check:data && npm run check:interaction",
     "build:pages": "npm run build -- --base=/power-strip/",
     "typecheck": "tsc -b",
     "lint": "node scripts/check-ui.mjs && oxlint",
     "check:ui": "node scripts/check-ui.mjs",
     "check:data": "node scripts/check-data.mjs",
+    "check:interaction": "node scripts/check-interaction.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "@tailwindcss/vite": "^4.3.3",

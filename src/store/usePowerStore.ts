@@ -37,6 +37,8 @@ interface PowerState {
   devices: Record<DeviceId, DeviceState>
   strips: Record<StationId, boolean>
   selected: Selection
+  panelExpanded: boolean
+  setPanelExpanded: (expanded: boolean) => void
   activeStation: StationId | null
   cutaway: boolean
   history: PowerSample[]
@@ -69,19 +71,32 @@ interface PowerState {
   tick: (seconds: number, now: number) => void
 }
 /** Update readouts in the same transaction as switches and sliders. */
-function withPower(state: PowerState, changes: Partial<PowerState>): Partial<PowerState> {
+function withPower(
+  state: PowerState,
+  changes: Partial<PowerState>,
+): Partial<PowerState> {
   const next = { ...state, ...changes }
-  const devices = Object.fromEntries(DEVICE_CATALOG.map(spec => {
-    const device = next.devices[spec.id]
-    const powered = next.masterOn && next.strips[spec.stationId] && device.on
-    return [spec.id, { ...device, watts: powered ? deviceReading(spec).watts * device.level : 0 }]
-  })) as Record<DeviceId, DeviceState>
+  const devices = Object.fromEntries(
+    DEVICE_CATALOG.map((spec) => {
+      const device = next.devices[spec.id]
+      const powered = next.masterOn && next.strips[spec.stationId] && device.on
+      return [
+        spec.id,
+        {
+          ...device,
+          watts: powered ? deviceReading(spec).watts * device.level : 0,
+        },
+      ]
+    }),
+  ) as Record<DeviceId, DeviceState>
   return { ...changes, devices }
 }
 export const usePowerStore = create<PowerState>()((set) => ({
   devices: initialDevices(),
   strips: { s1: true, s2: true, s3: true, s4: true },
   selected: null,
+  panelExpanded: false,
+  setPanelExpanded: (panelExpanded) => set({ panelExpanded }),
   activeStation: null,
   cutaway: true,
   history: [],
@@ -99,6 +114,7 @@ export const usePowerStore = create<PowerState>()((set) => ({
   select: (selected) =>
     set((state) => ({
       selected,
+      panelExpanded: false,
       activeStation:
         selected && selected !== 'room'
           ? selected.includes('-')
@@ -110,6 +126,7 @@ export const usePowerStore = create<PowerState>()((set) => ({
   selectStation: (activeStation) =>
     set((state) => ({
       selected: activeStation,
+      panelExpanded: false,
       activeStation,
       cutaway: true,
       autoRotate: false,
@@ -117,57 +134,68 @@ export const usePowerStore = create<PowerState>()((set) => ({
       inspectedDevice: null,
       cameraRevision: state.cameraRevision + 1,
     })),
-  closePanel: () => set({ selected: null }),
+  closePanel: () => set({ selected: null, panelExpanded: false }),
   toggle: (id) =>
-    set((state) => withPower(state, {
-      devices: {
-        ...state.devices,
-        [id]: { ...state.devices[id], on: !state.devices[id].on },
-      },
-    })),
-  setLevel: (id, level) =>
-    set((state) => withPower(state, {
-      devices: {
-        ...state.devices,
-        [id]: {
-          ...state.devices[id],
-          level: Number.isFinite(level)
-            ? Math.max(0.1, Math.min(1, level))
-            : state.devices[id].level,
+    set((state) =>
+      withPower(state, {
+        devices: {
+          ...state.devices,
+          [id]: { ...state.devices[id], on: !state.devices[id].on },
         },
-      },
-    })),
+      }),
+    ),
+  setLevel: (id, level) =>
+    set((state) =>
+      withPower(state, {
+        devices: {
+          ...state.devices,
+          [id]: {
+            ...state.devices[id],
+            level: Number.isFinite(level)
+              ? Math.max(0.1, Math.min(1, level))
+              : state.devices[id].level,
+          },
+        },
+      }),
+    ),
   setMaster: (masterOn) => set((state) => withPower(state, { masterOn })),
   setStrip: (id, on) =>
     set((state) => withPower(state, { strips: { ...state.strips, [id]: on } })),
   setMode: (mode) =>
-    set((state) => withPower(state, {
-      mode,
-      masterOn: true,
-      strips: { s1: true, s2: true, s3: true, s4: true },
-      night: mode === 'relax',
-      devices: Object.fromEntries(
-        DEVICE_CATALOG.map((d) => [
-          d.id,
-          {
-            ...state.devices[d.id],
-            on:
-              mode === 'away'
-                ? false
-                : mode === 'relax'
-                  ? ['lamp', 'speaker', 'fan', 'humidifier', 'phone'].includes(
-                      d.kind,
-                    )
-                  : d.defaultOn,
-            level: mode === 'relax' && d.kind === 'lamp' ? 0.4 : 1,
-          },
-        ]),
-      ) as Record<DeviceId, DeviceState>,
-    })),
+    set((state) =>
+      withPower(state, {
+        mode,
+        masterOn: true,
+        strips: { s1: true, s2: true, s3: true, s4: true },
+        night: mode === 'relax',
+        devices: Object.fromEntries(
+          DEVICE_CATALOG.map((d) => [
+            d.id,
+            {
+              ...state.devices[d.id],
+              on:
+                mode === 'away'
+                  ? false
+                  : mode === 'relax'
+                    ? [
+                        'lamp',
+                        'speaker',
+                        'fan',
+                        'humidifier',
+                        'phone',
+                      ].includes(d.kind)
+                    : d.defaultOn,
+              level: mode === 'relax' && d.kind === 'lamp' ? 0.4 : 1,
+            },
+          ]),
+        ) as Record<DeviceId, DeviceState>,
+      }),
+    ),
   setView: (cameraView) =>
     set((state) => ({
       cameraView,
       selected: null,
+      panelExpanded: false,
       activeStation: null,
       inspectionPart: 'station',
       inspectedDevice: null,
