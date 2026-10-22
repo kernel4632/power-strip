@@ -28,14 +28,13 @@ try {
   }
   near(total.energyWh, 21316.333333333332)
   assert.equal(total.peakW, 3190)
-  const meanWhileOn = g => g.energyWh / g.hours
-  const expected = represented.reduce((sum,g) => sum+meanWhileOn(g),0)
+  const expected = represented.reduce((sum,g) => sum+g.peakW,0)
   assert.ok(Object.values(store.getState().devices).every(d => d.watts > 0))
   for (let i=0; i<144; i++) {
     near(groups.reduce((sum,g) => sum+g.series[i],0), total.series[i])
     store.getState().tick(0, at(i).getTime())
     near(Object.values(store.getState().devices).reduce((sum,d) => sum+d.watts,0), expected)
-    for (const g of represented) near(devices.filter(d=>d.measuredGroup===g.id).reduce((sum,d)=>sum+deviceReading(d).watts,0),meanWhileOn(g))
+    for (const g of represented) near(devices.filter(d=>d.measuredGroup===g.id).reduce((sum,d)=>sum+deviceReading(d).watts,0),g.peakW)
   }
   // Even the formerly all-zero 11:40 interval leaves every switch-on model powered.
   store.getState().tick(0, Date.parse('2026-10-22T11:40:00+08:00'))
@@ -64,5 +63,15 @@ try {
   assert.ok(Object.values(store.getState().devices).every(d=>d.watts===0))
   store.getState().setMode('study')
   assert.ok(Object.values(store.getState().devices).every(d=>d.watts>0))
-  console.log('Data checks passed: source totals, 144 intervals, active-period means, clock independence, instant switch isolation, load scaling and session energy.')
+  // Regression: the two MacBooks have a 60 W recorded group peak, not a 6.5 W full-load reference.
+  near(store.getState().devices['s2-laptop'].watts,30)
+  near(store.getState().devices['s4-laptop'].watts,30)
+  store.getState().setLevel('s2-laptop',0.5)
+  near(store.getState().devices['s2-laptop'].watts,15)
+  near(store.getState().devices['s4-laptop'].watts,30)
+  store.getState().setLevel('s2-laptop',1)
+  near(store.getState().devices['s2-laptop'].watts,30)
+  store.getState().toggle('s2-laptop')
+  assert.equal(store.getState().devices['s2-laptop'].watts,0)
+  console.log('Data checks passed: source totals, 144 intervals, peak allocation, clock independence, immediate switches, MacBook 100%/50%/off and session energy.')
 } finally { await server.close() }
