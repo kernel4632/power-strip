@@ -66,6 +66,4 @@ export interface PowerSample {
   total: number
   devices: Record<DeviceId, number>
   stations: Record<StationId, number>
-  /** 场景外设备（空调、洗衣机等）在该时刻的实测合计功率 */
-  outside: number
 }

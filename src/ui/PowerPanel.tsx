@@ -38,7 +38,6 @@ import { usePowerStore } from '../store/usePowerStore'
 import type { DeviceId, StationId } from '../types'
 import { MeasuredLoad } from './MeasuredLoad'
 import { PowerChart } from './PowerChart'
-import { StripSpecs } from './StripSpecs'
 
 export function PowerPanel() {
   const state = usePowerStore()
@@ -54,16 +53,12 @@ export function PowerPanel() {
       : null
   const devices = station ? stationDevices(station.id) : DEVICE_CATALOG
   const device = spec ? state.devices[spec.id] : null
-  // 全寝口径要含场景外的空调、洗衣机等，否则与实测对不上
-  const roomScope = !device && !station
-  const sceneWatts = device
+  const watts = device
     ? device.watts
     : devices.reduce((sum, d) => sum + state.devices[d.id].watts, 0)
-  const watts = roomScope ? sceneWatts + state.outsideWatts : sceneWatts
-  const sceneEnergy = device
+  const energy = device
     ? device.energyWh
     : devices.reduce((sum, d) => sum + state.devices[d.id].energyWh, 0)
-  const energy = roomScope ? sceneEnergy + state.outsideEnergyWh : sceneEnergy
   const limit = spec?.ratedWatts ?? station?.limit ?? CIRCUIT_LIMIT
   const active =
     state.masterOn &&
@@ -319,16 +314,9 @@ export function PowerPanel() {
                       </span>
                     </Button>
                   ))}
-                  <div className="flex items-center justify-between px-3 py-3 text-sm text-muted-foreground">
-                    <span>场景外设备</span>
-                    <span className="text-xs tabular-nums">
-                      {state.outsideWatts.toFixed(0)} W
-                    </span>
-                  </div>
                 </CardContent>
               </Card>
             )}
-            {!station && <StripSpecs />}
             {spec && (
               <>
                 <Button

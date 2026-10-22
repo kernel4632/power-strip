@@ -4,7 +4,6 @@ import {
   DEVICE_MAP,
   STATIONS,
   deviceReading,
-  measuredOnlyWatts,
 } from '../data/catalog'
 import { measuredIndex as intervalAt } from '../lib/measuredTime'
 import type {
@@ -50,10 +49,6 @@ interface PowerState {
   masterOn: boolean
   /** 当前所处的实测十分钟区间序号 */
   measuredIndex: number
-  /** 场景外设备在该区间的实测合计功率 */
-  outsideWatts: number
-  /** 场景外设备在本次会话内的累计电量 */
-  outsideEnergyWh: number
   mode: SceneMode
   night: boolean
   energyFlow: boolean
@@ -90,8 +85,6 @@ export const usePowerStore = create<PowerState>()((set) => ({
   sessionSeconds: 0,
   masterOn: true,
   measuredIndex: BOOT_INDEX,
-  outsideWatts: measuredOnlyWatts(BOOT_AT),
-  outsideEnergyWh: 0,
   mode: 'study',
   night: false,
   energyFlow: false,
@@ -241,22 +234,17 @@ export const usePowerStore = create<PowerState>()((set) => ({
         stations[spec.stationId] += watts
         scene += watts
       })
-      const outside = measuredOnlyWatts(at)
       return {
         devices,
         measuredIndex: index,
-        outsideWatts: outside,
-        outsideEnergyWh:
-          state.outsideEnergyWh + (((state.outsideWatts + outside) / 2) * dt) / 3600,
         sessionSeconds: elapsed,
         history: [
           ...state.history,
           {
             time: now,
-            total: scene + outside,
+            total: scene,
             devices: readings,
             stations,
-            outside,
           },
         ].slice(-90),
       }

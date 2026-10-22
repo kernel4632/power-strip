@@ -101,30 +101,8 @@ const measuredKinds: Partial<
   lamp: { group: 'lamp', units: 4 },
 }
 /**
- * 实测表里有记录、但场景里没有建模的设备。
- * 它们的负荷照样计入全寝合计，否则全寝数字对不上实测。
- */
-export const MEASURED_ONLY_GROUPS = [
-  'ac',
-  'washer',
-  'dryer',
-  'kettle',
-  'cooker',
-  'led',
-] as const
-
-/** 场景外设备在指定时刻的合计功率。 */
-export function measuredOnlyWatts(at: Date): number {
-  const position = intervalPosition(at)
-  return MEASURED_ONLY_GROUPS.reduce(
-    (sum, id) => sum + sample(MEASURED_MAP[id]?.series, position),
-    0,
-  )
-}
-
-/**
- * 实测是按十分钟一格记的，直接在格与格之间跳会画出直角阶梯。
- * 这里按当前时刻在格内的进度做线性过渡，曲线连续，读数仍然出自实测。
+ * 实测按十分钟一格记录，直接在格与格之间跳会画出直角阶梯。
+ * 这里换算成格内进度，供相邻两格做线性过渡。
  */
 function intervalPosition(at: Date): number {
   const minutes =
