@@ -34,9 +34,11 @@ export interface DeviceSpec {
   kind: DeviceKind
   name: string
   english: string
-  description: string
-  ratedWatts: number
-  standbyWatts: number
+  /** 记录峰值均分到单台，仅用于图表量程，不是额定功率。 */
+  referenceWatts: number
+  measuredGroup: string
+  /** 该实测组记录的是几台设备，用来把组合计功率折算成单台 */
+  measuredUnits: number
   color: string
   localPosition: Point3
   position: Point3
@@ -47,11 +49,14 @@ export interface DeviceSpec {
   cablePort: Point3
   defaultOn: boolean
 }
+/** 功率读数的来源，决定界面上挂哪个徽章。 */
+export type PowerSource = 'allocated'
 export interface DeviceState {
   on: boolean
   level: number
   watts: number
   energyWh: number
+  powerSource: PowerSource
 }
 export interface PowerSample {
   time: number

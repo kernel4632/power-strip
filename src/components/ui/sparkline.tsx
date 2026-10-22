@@ -41,10 +41,13 @@ export function Sparkline({
   const rawMin = Math.min(...values)
   const rawMax = Math.max(...values)
   const spread = rawMax - rawMin
-  const padding = spread > 0 ? spread * 0.25 : Math.max(2, rawMax * 0.15)
-  const low = Math.max(0, rawMin - padding)
-  const high = rawMax + padding
+  // 变化幅度不足量程 5% 时按 5% 展开，否则半瓦的抖动会被放大成陡坡
+  const scale = Math.max(spread * 1.5, Math.abs(rawMax) * 0.05, 2)
+  const slack = (scale - spread) / 2
+  const low = Math.max(0, rawMin - slack)
+  const high = Math.max(low + 1, rawMax + slack)
   const domain = high - low || 1
+  const digits = domain >= 10 ? 0 : 1
 
   const x = (index: number) => (index / (count - 1)) * 100
   const y = (value: number) => 100 - ((value - low) / domain) * 100
@@ -88,9 +91,9 @@ export function Sparkline({
         >
           {!compact && (
             <div className="absolute inset-y-0 -left-9 flex w-8 flex-col justify-between text-right text-xs tabular-nums text-muted-foreground">
-              <span>{Math.round(high)}</span>
-              <span>{Math.round((high + low) / 2)}</span>
-              <span>{Math.round(low)}</span>
+              <span>{high.toFixed(digits)}</span>
+              <span>{((high + low) / 2).toFixed(digits)}</span>
+              <span>{low.toFixed(digits)}</span>
             </div>
           )}
           <svg

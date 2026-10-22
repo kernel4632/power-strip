@@ -26,7 +26,6 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
 import { formatEnergy, loadLevel } from '@/lib/format'
 import {
-  CIRCUIT_LIMIT,
   DEVICE_CATALOG,
   DEVICE_MAP,
   STATIONS,
@@ -36,7 +35,10 @@ import {
 } from '../data/catalog'
 import { usePowerStore } from '../store/usePowerStore'
 import type { DeviceId, StationId } from '../types'
+import { MeasuredLoad } from './MeasuredLoad'
 import { PowerChart } from './PowerChart'
+import { StripSpecs } from './StripSpecs'
+import { DESK_STRIP } from '../data/strips'
 
 export function PowerPanel() {
   const state = usePowerStore()
@@ -58,7 +60,7 @@ export function PowerPanel() {
   const energy = device
     ? device.energyWh
     : devices.reduce((sum, d) => sum + state.devices[d.id].energyWh, 0)
-  const limit = spec?.ratedWatts ?? station?.limit ?? CIRCUIT_LIMIT
+  const limit = spec?.referenceWatts ?? station?.limit ?? 0
   const active =
     state.masterOn &&
     (station ? state.strips[station.id] : true) &&
@@ -99,7 +101,7 @@ export function PowerPanel() {
         <SheetHeader className="shrink-0 pr-16">
           <SheetTitle>
             {spec?.name ??
-              (station ? `${station.name} · 独立插排` : '全寝能源概览')}
+              (station ? `${station.name} · 独立插排` : '能源概览')}
           </SheetTitle>
           <SheetDescription className="sr-only">功率与电源控制</SheetDescription>
         </SheetHeader>
@@ -123,13 +125,16 @@ export function PowerPanel() {
                   : station && !state.strips[station.id]
                     ? '本床位已断电'
                     : device && !device.on
-                      ? '设备待机'
+                      ? '设备已断电'
                       : '正在供电'}
               </Badge>
               {spec && (
                 <Badge variant="secondary">
                   {station?.name} · 插孔 {spec.socket + 1}
                 </Badge>
+              )}
+              {device && (
+                <Badge variant="outline">运行均值 · 均分</Badge>
               )}
             </div>
             {spec && (
@@ -149,7 +154,7 @@ export function PowerPanel() {
                     ? '当前设备功率'
                     : station
                       ? '本床位总功率'
-                      : '全寝总功率'}
+                      : '场景设备总功率'}
                 </CardTitle>
                 <CardTitle className="text-4xl tabular-nums">
                   {watts.toFixed(1)}{' '}
@@ -159,9 +164,9 @@ export function PowerPanel() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Progress
+                {limit > 0 && <Progress
                   value={Math.min(100, (watts / limit) * 100)}
-                  aria-label="负载占比"
+                  aria-label={spec ? '相对记录峰值' : '插排最大功率占比'}
                   className={cn(
                     '[&_[data-slot=progress-indicator]]:bg-chart-2',
                     level === 'near' &&
@@ -169,7 +174,7 @@ export function PowerPanel() {
                     level === 'over' &&
                       '[&_[data-slot=progress-indicator]]:bg-destructive',
                   )}
-                />
+                />}
               </CardContent>
             </Card>
             <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
@@ -238,11 +243,12 @@ export function PowerPanel() {
                 />
               </CardContent>
             </Card>
+            {(spec || !station) && <MeasuredLoad key={spec?.id ?? 'all'} device={spec ?? undefined} />}
             <Separator />
             <div className="grid grid-cols-2 gap-4">
               <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
                 <CardHeader className="px-2">
-                  <CardTitle className="text-sm">累计用电</CardTitle>
+                  <CardTitle className="text-sm">本次用电</CardTitle>
                   <CardTitle className="text-lg tabular-nums">
                     {energyText.value} {energyText.unit}
                   </CardTitle>
@@ -260,7 +266,7 @@ export function PowerPanel() {
             {!spec && station && (
               <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
                 <CardHeader className="px-2">
-                  <CardTitle>四孔插排</CardTitle>
+                  <CardTitle>四位插排</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 px-0">
                   {devices.map((d) => (
@@ -309,6 +315,7 @@ export function PowerPanel() {
                 </CardContent>
               </Card>
             )}
+            {!spec && <StripSpecs current={station ? DESK_STRIP : undefined} />}
             {spec && (
               <>
                 <Button
@@ -352,7 +359,7 @@ export function PowerPanel() {
                 </Button>
               </div>
             )}
-            {watts > limit && (
+            {station && !spec && watts > limit && (
               <Alert variant="destructive">
                 <Info />
                 <AlertTitle>负载偏高</AlertTitle>

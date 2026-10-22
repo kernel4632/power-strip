@@ -576,45 +576,12 @@ function DeskStructure({ station }: { station: StationSpec }) {
             )}
           </group>
         )}
-        {station.id === 's1' && (
-          <group>
-            <Box
-              size={[0.43, 0.019, 0.135]}
-              position={[-0.35, 0.871, 0.18]}
-              color="#e3e1d0"
-              round={0.006}
-            />
-            {Array.from({ length: 3 }, (_, r) =>
-              Array.from({ length: 12 }, (_, c) => (
-                <Box
-                  key={`${r}-${c}`}
-                  size={[0.026, 0.003, 0.026]}
-                  position={[-0.535 + c * 0.033, 0.883, 0.138 + r * 0.037]}
-                  color={(r + c) % 9 === 0 ? station.color : '#bac7bb'}
-                />
-              )),
-            )}
-            <Sphere
-              position={[0.07, 0.883, 0.19]}
-              scale={[0.033, 0.017, 0.05]}
-              color="#d7ddd0"
-            />
-          </group>
-        )}
-        {station.id !== 's1' && (
+        {(station.id === 's2' || station.id === 's4') && (
           <Box
             size={[0.15, 0.012, 0.12]}
             position={[0.08, 0.866, 0.19]}
             rotation={[0, 0.09, 0]}
             color={PAPER}
-          />
-        )}
-        {station.id === 's3' && (
-          <Rod
-            from={[0.04, 0.874, 0.1]}
-            to={[0.16, 0.874, 0.21]}
-            radius={0.004}
-            color="#586772"
           />
         )}
         <Cylinder
@@ -733,13 +700,13 @@ function StationLife({ station }: { station: StationSpec }) {
           <Cylinder
             radius={0.035}
             height={0.085}
-            position={[0.12, 0.905, 0.235]}
+            position={[-0.72, 0.905, 0.24]}
             color="#b9c7c0"
           />
           <Ring
             radius={0.026}
             tube={0.005}
-            position={[0.13, 0.925, 0.235]}
+            position={[-0.71, 0.925, 0.24]}
             color="#8fa09a"
           />
           <group position={[-0.58, 1.42, -0.501]}>
@@ -859,7 +826,7 @@ function StationLife({ station }: { station: StationSpec }) {
       )}
       {id === 's3' && (
         <group>
-          <group position={[0.06, 0.88, 0.25]} rotation={[0, -0.28, 0]}>
+          <group position={[-0.68, 0.88, -0.28]} rotation={[0, 0.2, 0]}>
             <Box size={[0.22, 0.012, 0.16]} color="#e6dfcc" round={0.004} />
             <Box
               size={[0.19, 0.0015, 0.14]}
@@ -868,9 +835,9 @@ function StationLife({ station }: { station: StationSpec }) {
             />
           </group>
           {[
-            [0.17, 0.225, '#b7644e'],
-            [0.22, 0.19, '#7e8fa0'],
-            [0.26, 0.235, '#c6a96a'],
+            [0.59, 0.2, '#b7644e'],
+            [0.63, 0.24, '#7e8fa0'],
+            [0.67, 0.21, '#c6a96a'],
           ].map(([x, z, color]) => (
             <group key={String(x)} position={[Number(x), 0.9, Number(z)]}>
               <Cylinder radius={0.019} height={0.07} color={String(color)} />
@@ -888,7 +855,7 @@ function StationLife({ station }: { station: StationSpec }) {
               />
             </group>
           ))}
-          <group position={[1.03, 0.36, 0.3]} rotation={[0, 0, 0.08]}>
+          <group position={[0.64, 0.36, 0.36]} rotation={[0, 0, 0.08]}>
             <Cylinder radius={0.045} height={0.62} color="#d8cfb8" />
             <Cylinder
               radius={0.047}

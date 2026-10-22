@@ -1,0 +1,68 @@
+import assert from 'node:assert/strict'
+import { createServer } from 'vite'
+
+const server = await createServer({ configFile: false, server: { middlewareMode: true } })
+try {
+  const { MEASURED_GROUPS: groups, MEASURED_TOTAL: total } = await server.ssrLoadModule('/src/data/measured.ts')
+  const { DEVICE_CATALOG: devices, STATIONS, deviceReading } = await server.ssrLoadModule('/src/data/catalog.ts')
+  const { STRIP_SPECS: strips, DESK_STRIP } = await server.ssrLoadModule('/src/data/strips.ts')
+  const { usePowerStore: store } = await server.ssrLoadModule('/src/store/usePowerStore.ts')
+  const near = (a, b) => assert.ok(Math.abs(a-b) < 1e-7, `${a} != ${b}`)
+  const at = i => new Date(Date.parse('2026-10-22T00:00:00+08:00') + i * 600000)
+  assert.equal(groups.length, 12)
+  assert.equal(strips.length, 12)
+  assert.equal(DESK_STRIP.name, '公牛407四插位')
+  assert.equal(DESK_STRIP.maxW, 2500)
+  assert.equal(DESK_STRIP.price, 29.8)
+  assert.ok(STATIONS.every(s => s.limit === DESK_STRIP.maxW))
+  assert.equal(devices.length, 14)
+  assert.equal(new Set(devices.map(d => d.id)).size, devices.length)
+  const represented = groups.filter(g => devices.some(d => d.measuredGroup === g.id))
+  assert.equal(represented.length, 6)
+  for (const g of represented) assert.equal(devices.filter(d => d.measuredGroup === g.id).length, g.units, g.id)
+  assert.ok(devices.filter(d => d.measuredGroup === 'gaming').every(d => d.kind === 'laptop'))
+  for (const g of groups) {
+    assert.equal(g.series.length, 144)
+    near(g.series.reduce((a,b) => a+b, 0)/6, g.energyWh)
+    near(g.avgW*24, g.energyWh)
+  }
+  near(total.energyWh, 21316.333333333332)
+  assert.equal(total.peakW, 3190)
+  const meanWhileOn = g => g.energyWh / g.hours
+  const expected = represented.reduce((sum,g) => sum+meanWhileOn(g),0)
+  assert.ok(Object.values(store.getState().devices).every(d => d.watts > 0))
+  for (let i=0; i<144; i++) {
+    near(groups.reduce((sum,g) => sum+g.series[i],0), total.series[i])
+    store.getState().tick(0, at(i).getTime())
+    near(Object.values(store.getState().devices).reduce((sum,d) => sum+d.watts,0), expected)
+    for (const g of represented) near(devices.filter(d=>d.measuredGroup===g.id).reduce((sum,d)=>sum+deviceReading(d).watts,0),meanWhileOn(g))
+  }
+  // Even the formerly all-zero 11:40 interval leaves every switch-on model powered.
+  store.getState().tick(0, Date.parse('2026-10-22T11:40:00+08:00'))
+  assert.ok(Object.values(store.getState().devices).every(d => d.watts > 0))
+  const laptopW = deviceReading(devices.find(d => d.id === 's1-laptop')).watts
+  const target='s1-laptop', now=at(0).getTime()
+  store.getState().toggle(target)
+  assert.equal(store.getState().devices[target].watts,0)
+  near(store.getState().devices['s3-laptop'].watts,laptopW)
+  store.getState().toggle(target); store.getState().setLevel(target,0.5)
+  near(store.getState().devices[target].watts,laptopW/2)
+  const start=store.getState().devices[target].energyWh
+  for(let t=1;t<=60;t++) store.getState().tick(1,now+t*1000)
+  near(store.getState().devices[target].energyWh-start,laptopW/120)
+  store.getState().setStrip('s1',false)
+  assert.ok(devices.filter(d=>d.stationId==='s1').every(d=>store.getState().devices[d.id].watts===0))
+  store.getState().setMaster(false)
+  assert.ok(Object.values(store.getState().devices).every(d=>d.watts===0))
+  store.getState().tick(0, now)
+  assert.equal(store.getState().history.at(-1).total,0)
+  store.getState().setStrip('s1',true)
+  assert.equal(store.getState().devices[target].watts,0)
+  store.getState().setMaster(true)
+  near(store.getState().devices[target].watts,laptopW/2)
+  store.getState().setMode('away')
+  assert.ok(Object.values(store.getState().devices).every(d=>d.watts===0))
+  store.getState().setMode('study')
+  assert.ok(Object.values(store.getState().devices).every(d=>d.watts>0))
+  console.log('Data checks passed: source totals, 144 intervals, active-period means, clock independence, instant switch isolation, load scaling and session energy.')
+} finally { await server.close() }

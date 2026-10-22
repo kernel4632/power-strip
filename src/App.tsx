@@ -190,7 +190,7 @@ export default function App() {
             onClick={() => state.setView('overview')}
           >
             <Home />
-            DORM LAB
+            宿舍
           </Button>
           <div className="pointer-events-auto flex items-center gap-2">
             <Tooltip>
@@ -228,10 +228,10 @@ export default function App() {
               'absolute bottom-4 left-4 z-20 w-44 gap-3 bg-linear-to-br from-card to-secondary py-4 md:bottom-4 md:w-56',
               panelOpen && 'hidden',
             )}
-            aria-label="全寝功率概览"
+            aria-label="场景设备功率概览"
           >
             <CardHeader className="gap-2 px-4">
-              <CardTitle className="text-sm">全寝功率</CardTitle>
+              <CardTitle className="text-sm">场景设备功率</CardTitle>
               <CardTitle className="text-3xl tabular-nums">
                 {total.toFixed(0)}{' '}
                 <span className="text-sm font-normal">
@@ -324,47 +324,6 @@ export default function App() {
                       {view.label}
                     </Button>
                   ))}
-                  {active && (
-                    <>
-                      <Separator />
-                      <CardDescription>
-                        {active.name} · 模型细节
-                      </CardDescription>
-                      <Button
-                        variant="ghost"
-                        className="justify-start"
-                        onClick={() => {
-                          state.selectStation(active.id)
-                          state.closePanel()
-                          setMenu(null)
-                        }}
-                      >
-                        完整床位
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="justify-start"
-                        onClick={() => {
-                          state.inspect('strip')
-                          state.closePanel()
-                          setMenu(null)
-                        }}
-                      >
-                        插头与走线
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="justify-start"
-                        onClick={() => {
-                          state.inspect('bed')
-                          state.closePanel()
-                          setMenu(null)
-                        }}
-                      >
-                        上铺与护栏
-                      </Button>
-                    </>
-                  )}
                 </div>
               </PopoverContent>
             </Popover>
@@ -419,9 +378,6 @@ export default function App() {
                   </Button>
                 </div>
                 <div className="mt-4 space-y-4">
-                  <CardDescription>
-                    点击床位进入桌面，点电器查看功率、开关和负载。每个床位独立供电。
-                  </CardDescription>
                   <Separator />
                   <div className="flex justify-between text-sm">
                     <KbdGroup>
