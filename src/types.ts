@@ -37,7 +37,7 @@ export interface DeviceSpec {
   /** 组记录峰值均分到单台，用作 100% 负载参考和图表量程，不是额定功率。 */
   referenceWatts: number
   measuredGroup: string
-  /** 该实测组记录的是几台设备，用来把组合计功率折算成单台 */
+  /** 该资料组记录的是几台设备，用来把组合计功率折算成单台 */
   measuredUnits: number
   color: string
   localPosition: Point3

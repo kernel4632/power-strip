@@ -6,11 +6,23 @@ try {
   const { MEASURED_GROUPS: groups, MEASURED_TOTAL: total } = await server.ssrLoadModule('/src/data/measured.ts')
   const { DEVICE_CATALOG: devices, STATIONS, deviceReading } = await server.ssrLoadModule('/src/data/catalog.ts')
   const { STRIP_SPECS: strips, DESK_STRIP } = await server.ssrLoadModule('/src/data/strips.ts')
+  const { DEVICE_REFERENCES: references, DEVICE_REFERENCE_MAP: refMap, POWER_SOURCE, STRIP_SOURCE, DEVICE_SOURCE } = await server.ssrLoadModule('/src/data/references.ts')
   const { usePowerStore: store } = await server.ssrLoadModule('/src/store/usePowerStore.ts')
   const near = (a, b) => assert.ok(Math.abs(a-b) < 1e-7, `${a} != ${b}`)
   const at = i => new Date(Date.parse('2026-10-22T00:00:00+08:00') + i * 600000)
   assert.equal(groups.length, 12)
   assert.equal(strips.length, 12)
+  assert.deepEqual(references.map(r => r.id), groups.map(g => g.id))
+  for (const source of [POWER_SOURCE, STRIP_SOURCE, DEVICE_SOURCE]) {
+    assert.match(source.sha256, /^[a-f0-9]{64}$/)
+    assert.ok(source.file.endsWith('.xlsx') && source.sheet && source.range)
+  }
+  // Source specifications and recorded peaks are different quantities: retain both.
+  assert.equal(refMap.macbook.referencePower, '35 W')
+  assert.equal(refMap.gaming.model, '惠普暗影精灵11')
+  assert.equal(refMap.gaming.referencePower, '230 W')
+  assert.equal(refMap.ac.referencePower, '1060(130-1400)W')
+  assert.equal(refMap.led.model, null)
   assert.equal(DESK_STRIP.name, '公牛407四插位')
   assert.equal(DESK_STRIP.maxW, 2500)
   assert.equal(DESK_STRIP.price, 29.8)
@@ -73,5 +85,5 @@ try {
   near(store.getState().devices['s2-laptop'].watts,30)
   store.getState().toggle('s2-laptop')
   assert.equal(store.getState().devices['s2-laptop'].watts,0)
-  console.log('Data checks passed: source totals, 144 intervals, peak allocation, clock independence, immediate switches, MacBook 100%/50%/off and session energy.')
+  console.log('Data checks passed: workbook provenance, 12 device references, source totals, 144 intervals, peak allocation, clock independence, immediate switches, MacBook 100%/50%/off and session energy.')
 } finally { await server.close() }

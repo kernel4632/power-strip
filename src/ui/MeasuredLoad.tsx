@@ -11,6 +11,8 @@ import { Separator } from '@/components/ui/separator'
 import { Sparkline } from '@/components/ui/sparkline'
 import { MEASURED_GROUPS, MEASURED_MAP, MEASURED_TIMES, MEASURED_TOTAL } from '../data/measured'
 import type { DeviceSpec } from '../types'
+import { DataSource } from './DataSource'
+import { DEVICE_REFERENCE_MAP } from '../data/references'
 
 const BY_AVERAGE = [MEASURED_TOTAL, ...[...MEASURED_GROUPS].sort((a, b) => b.avgW - a.avgW)]
 
@@ -35,6 +37,7 @@ export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
           <CardTitle>24 小时记录</CardTitle>
         </div>
         <CardDescription>{device ? `${device.name} · ${group.units} 台均分` : group.name}</CardDescription>
+        {DEVICE_REFERENCE_MAP[group.id]?.model && <CardDescription>{DEVICE_REFERENCE_MAP[group.id].model}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-4 px-2">
         <Sparkline data={data} unit="W" label="24 小时功率记录" />
@@ -54,6 +57,7 @@ export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
             </div>
           </div>
         </div>
+        <DataSource groupId={group.id} device={device} />
         {!device && <Separator />}
         {!device && <div className="space-y-1">
           {BY_AVERAGE.map((item) => (

@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
 import { STRIP_SPECS, type StripSpec } from '../data/strips'
+import { DataSource } from './DataSource'
 
 export function StripSpecs({ current }: { current?: StripSpec }) {
   return (
@@ -16,6 +17,7 @@ export function StripSpecs({ current }: { current?: StripSpec }) {
             {STRIP_SPECS.map(spec => <Spec key={spec.id} spec={spec} />)}
           </CollapsibleContent>
         </Collapsible>
+        <DataSource strips />
       </CardContent>
     </Card>
   )
