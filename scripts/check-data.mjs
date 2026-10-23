@@ -85,7 +85,7 @@ try {
     integrated += (previous + watts) / 2 / 3600
   }
   assert.ok(Math.max(...readings) - Math.min(...readings) > 5, 'unchanged 50% load must keep fluctuating')
-  assert.ok(Math.abs(store.getState().devices[target].energyWh-start - integrated) < 0.001, 'exact energy agrees with one-second trapezoidal estimate')
+  near(store.getState().devices[target].energyWh-start, integrated)
   store.getState().setStrip('s1',false)
   assert.ok(devices.filter(d=>d.stationId==='s1').every(d=>store.getState().devices[d.id].watts===0))
   store.getState().setMaster(false)

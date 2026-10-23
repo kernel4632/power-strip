@@ -1,22 +1,12 @@
-/** Integrate the existing sine target and first-order smoothing over real time.
- * The closed form avoids discarded time or a catch-up loop after a suspended tab.
+/** Power and trapezoidal energy update restored from 3746e49.
+ * Keep the complete elapsed interval; do not restore the old five-second cap.
  */
 export function powerStep(watts: number, ceiling: number, elapsed: number, seconds: number, index: number) {
-  const rate = 2.5
-  const frequency = 0.7
-  const phase = elapsed * frequency + index * 2
-  const endPhase = phase + seconds * frequency
-  const base = ceiling * 0.97
-  const amplitude = ceiling * 0.03
-  const sine = amplitude * rate * rate / (rate * rate + frequency * frequency)
-  const cosine = -amplitude * rate * frequency / (rate * rate + frequency * frequency)
-  const residual = watts - base - sine * Math.sin(phase) - cosine * Math.cos(phase)
-  const decay = Math.exp(-rate * seconds)
+  const wave = 0.97 + 0.03 * Math.sin((elapsed + seconds) * 0.7 + index * 2)
+  const target = ceiling * wave
+  const nextWatts = watts + (target - watts) * (1 - Math.exp(-seconds * 2.5))
   return {
-    watts: base + sine * Math.sin(endPhase) + cosine * Math.cos(endPhase) + residual * decay,
-    energyWh: (base * seconds
-      + sine * (Math.cos(phase) - Math.cos(endPhase)) / frequency
-      + cosine * (Math.sin(endPhase) - Math.sin(phase)) / frequency
-      + residual * -Math.expm1(-rate * seconds) / rate) / 3600,
+    watts: nextWatts,
+    energyWh: (((watts + nextWatts) / 2) * seconds) / 3600,
   }
 }

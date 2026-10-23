@@ -6,7 +6,7 @@ export function formatPower(watts: number) {
 }
 
 export function formatEnergy(wattHours: number) {
-  return { value: wattHours.toFixed(wattHours < 10 ? 2 : 1), unit: 'Wh' }
+  return { value: (wattHours / 1000).toFixed(4), unit: 'kWh' }
 }
 
 /** 负载占阈值比例，用于分级配色。 */

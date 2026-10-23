@@ -10,25 +10,16 @@ try {
   const initial = store.getState()
   const near = (a, b, tolerance = 1e-8) => assert.ok(Math.abs(a - b) < tolerance, `${a} != ${b}`)
   const laptop = () => store.getState().devices['s1-laptop']
-  // Independent fine-step integration of dP/dt = 2.5 * (target - P).
-  let watts = 230, wh = 0
-  const dt = 0.0001
-  for (let i = 0; i < 600000; i++) {
-    wh += watts * dt / 3600
-    watts += 2.5 * (230 * (0.97 + 0.03 * Math.sin(i * dt * 0.7)) - watts) * dt
-  }
-  const integrated = powerStep(230, 230, 0, 60, 0)
-  near(integrated.watts, watts, 0.001)
-  near(integrated.energyWh, wh, 0.00001)
-  // A delayed tick must count the same minute as 60 ordinary updates.
+  // Historical fixture: 3746e49, 230 W, phase 0, sixty one-second ticks.
+  for (let i = 0; i < 60; i++) store.getState().tick(1, Date.now())
+  near(laptop().watts, 217.07793626510633)
+  near(laptop().energyWh, 3.7232461942616575)
+  store.setState(initial, true)
+  // Delayed updates retain the full elapsed minute (the old cap lost 55 seconds).
   store.getState().tick(60, Date.now())
   const delayed = laptop()
   assert.equal(store.getState().sessionSeconds, 60)
   assert.ok(delayed.energyWh > 3.6 && delayed.energyWh < 3.84)
-  store.setState(initial, true)
-  for (let i = 0; i < 60; i++) store.getState().tick(1, Date.now())
-  near(laptop().energyWh, delayed.energyWh)
-  near(laptop().watts, delayed.watts)
   // Check events between timer ticks, with one shared monotonic clock.
   store.setState(initial, true)
   let clock = 0
@@ -53,6 +44,8 @@ try {
   store.getState().sync(59000) // A backwards clock cannot subtract energy/time.
   near(laptop().energyWh, energy)
   assert.equal(store.getState().sessionSeconds, 60)
-  for (const value of [0, 9, 99.9, 100, 1000]) assert.equal(formatEnergy(value).unit, 'Wh')
-  console.log('Energy checks passed: independent integration, delayed ticks, exact control boundaries, power-off, monotonic clock and stable units.')
+  assert.deepEqual(formatEnergy(0), { value: '0.0000', unit: 'kWh' })
+  assert.deepEqual(formatEnergy(3.7232461942616575), { value: '0.0037', unit: 'kWh' })
+  assert.deepEqual(formatEnergy(1000), { value: '1.0000', unit: 'kWh' })
+  console.log('Energy checks passed: historical 3746e49 fixture, delayed ticks, control boundaries, power-off, monotonic clock and four-decimal kWh.')
 } finally { mock.restoreAll(); await server.close() }
