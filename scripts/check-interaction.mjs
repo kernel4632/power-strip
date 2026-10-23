@@ -80,18 +80,21 @@ try {
   const { SCENE_MEASURED_TOTAL } = await server.ssrLoadModule('/src/data/sceneMeasured.ts')
   const recorded = [...SCENE_MEASURED_TOTAL.series]
   const before = store.getState().history.at(-1)
-  // No timer tick between changes: rapid drag and off/on must all reach the chart.
+  const lengthBefore = store.getState().history.length
+  // 两次 tick 之间不改设置：滑块调到哪，曲线末端立刻就是哪。
   store.getState().setLevel('s1-laptop', 0.5)
   const half = store.getState().history.at(-1)
   assert.equal(half.devices['s1-laptop'], 115)
-  assert.equal(before.devices['s1-laptop'], 230, 'previous sample stays intact')
+  assert.equal(before.devices['s1-laptop'], 230, '之前的采样保持不动')
   assert.equal(half.total, before.total - 115)
+  // 同一采样窗口内连拖 40 次，只能多出一两个点，不能把 90 点缓冲挤空。
+  for (let i = 1; i <= 40; i++) store.getState().setLevel('s1-laptop', (i / 40) * 0.5)
+  assert.ok(store.getState().history.length <= lengthBefore + 2, '拖动不应逐次入队')
   store.getState().setLevel('s1-laptop', 0.1)
   store.getState().toggle('s1-laptop')
   store.getState().toggle('s1-laptop')
-  const drag = store.getState().history.slice(-4).map(s => s.devices['s1-laptop'])
-  assert.deepEqual(drag.slice(0, 3), [115, 23, 0])
-  assert.ok(drag[3] >= 23 * 0.94 && drag[3] <= 23)
+  const tail = store.getState().history.at(-1)
+  assert.equal(tail.devices['s1-laptop'], store.getState().devices['s1-laptop'].watts, '曲线末端跟住最新读数')
   store.getState().setStrip('s1', false)
   assert.equal(store.getState().history.at(-1).stations.s1, 0)
   store.getState().setMaster(false)

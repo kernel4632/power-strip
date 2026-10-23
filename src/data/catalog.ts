@@ -4,7 +4,6 @@ import type {
   DeviceKind,
   DeviceSpec,
   Point3,
-  PowerSource,
   SceneMode,
   StationId,
   StationSpec,
@@ -74,17 +73,11 @@ export function toWorld(station: StationSpec, local: Point3): Point3 {
     station.position[2] - local[0] * s + local[2] * c,
   ]
 }
-/** 100% load is the unit's nameplate figure from the device reference sheet
- * (游戏笔记本 230 W, MacBook 35 W, 台灯 10 W …), so the room total is a sum of
- * ratings and never a sum of unrelated peaks. Ratings may exceed the recorded
- * coincident peak; the two describe different things on purpose.
- * Historical records remain unchanged; the computer clock never controls a switch.
+/** 资料表里 "230 W"、"1060(130-1400)W" 这类字符串的首个数字。
+ * 100% 负载就取这一列的单台额定值（游戏笔记本 230 W、MacBook 35 W、台灯 10 W…），
+ * 所以全寝合计是额定功率之和，不是不同时刻的峰值之和——额定值可以超过同时段
+ * 记录峰值，两者本来就在描述不同的东西。
  */
-export function deviceReading(spec: DeviceSpec): { watts: number; source: PowerSource } {
-  return { watts: spec.referenceWatts, source: 'nameplate' }
-}
-
-/** Leading number of a reference string such as "230 W" or "1060(130-1400)W". */
 function nameplateWatts(groupId: string): number {
   const text = DEVICE_REFERENCE_MAP[groupId]?.referencePower ?? ''
   const value = Number.parseFloat(text)

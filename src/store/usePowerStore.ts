@@ -4,7 +4,6 @@ import {
   DEVICE_CATALOG,
   DEVICE_MAP,
   STATIONS,
-  deviceReading,
 } from '../data/catalog'
 import type {
   CameraView,
@@ -19,19 +18,15 @@ import type {
 
 function initialDevices(): Record<DeviceId, DeviceState> {
   return Object.fromEntries(
-    DEVICE_CATALOG.map((d) => {
-      const reading = deviceReading(d)
-      return [
-        d.id,
-        {
-          on: d.defaultOn,
-          level: 1,
-          watts: d.defaultOn ? reading.watts : 0,
-          energyWh: 0,
-          powerSource: reading.source,
-        },
-      ]
-    }),
+    DEVICE_CATALOG.map((d) => [
+      d.id,
+      {
+        on: d.defaultOn,
+        level: 1,
+        watts: d.defaultOn ? d.referenceWatts : 0,
+        energyWh: 0,
+      },
+    ]),
   ) as Record<DeviceId, DeviceState>
 }
 interface PowerState {
@@ -86,15 +81,18 @@ function powerSample(devices: Record<DeviceId, DeviceState>, time: number): Powe
   return { time, devices: readings, stations, total }
 }
 
+/** 采样窗口：同一窗口内的连续控制只保留最后一个读数。
+ * 拖动滑块一秒能触发几十次事件，逐次入队会把 90 点缓冲里的历史挤空。
+ */
+const SAMPLE_WINDOW_MS = 250
 function recordPower(history: PowerSample[], devices: Record<DeviceId, DeviceState>, now: number) {
-  // Keep event samples as well as one-second samples, including fast drags.
-  // A monotonic timestamp also handles a system-clock correction.
+  // 控制事件与每秒采样都进队列；用单调时间戳，系统时钟回拨也不会乱序。
   const lastTime = history.at(-1)?.time ?? 0
-  const time = Math.max(Number.isFinite(now) ? now : Date.now(), lastTime + 1)
-  return [...history, powerSample(devices, time)].slice(-90)
+  const time = Math.max(Number.isFinite(now) ? now : Date.now(), lastTime)
+  const kept = time - lastTime < SAMPLE_WINDOW_MS ? history.slice(0, -1) : history
+  return [...kept, powerSample(devices, time)].slice(-90)
 }
-/** Restored from 3746e49: deterministic demo fluctuation, not measured data.
- * Each device has a different phase; the factor stays between 94% and 100%.
+/** 取自 3746e49 的演示用波动，不是采集值。各设备相位不同，系数保持在 94%～100%。
  */
 function powerWave(elapsed: number, index: number) {
   return 0.97 + 0.03 * Math.sin(elapsed * 0.7 + index * 2)
@@ -107,7 +105,7 @@ function advancePower(state: PowerState, seconds: number): Partial<PowerState> {
     const device = state.devices[spec.id]
     const powered = state.masterOn && state.strips[spec.stationId] && device.on
     const step = powered
-      ? powerStep(device.watts, deviceReading(spec).watts * device.level, state.sessionSeconds, dt, index)
+      ? powerStep(device.watts, spec.referenceWatts * device.level, state.sessionSeconds, dt, index)
       : { watts: 0, energyWh: 0 }
     devices[spec.id] = { ...device, watts: step.watts, energyWh: device.energyWh + step.energyWh }
   })
@@ -121,12 +119,12 @@ function settle(state: PowerState, monotonicMs: number): Partial<PowerState> {
     lastTickMs: now,
   }
 }
-/** Update readouts in the same transaction as switches and sliders. */
+/** 开关与滑块和读数在同一次事务里更新。 */
 function withPower(
   state: PowerState,
   changes: Partial<PowerState>,
 ): Partial<PowerState> {
-  // Settle the old settings up to the exact control event, before applying changes.
+  // 先把旧设置结算到控制发生的那一刻，再应用改动。
   const settled = state.lastTickMs === null ? {} : settle(state, performance.now())
   state = { ...state, ...settled }
   const next = { ...state, ...changes }
@@ -135,10 +133,10 @@ function withPower(
       const device = next.devices[spec.id]
       const previous = state.devices[spec.id]
       const powered = next.masterOn && next.strips[spec.stationId] && device.on
-      // Scale the current wave when dragging; do not reset other devices.
+      // 拖动时按比例缩放当前波值，不去重置其他设备。
       const watts = !powered ? 0 : previous.watts > 0
         ? previous.watts * (device.level / previous.level)
-        : deviceReading(spec).watts * device.level * powerWave(state.sessionSeconds, index)
+        : spec.referenceWatts * device.level * powerWave(state.sessionSeconds, index)
       return [
         spec.id,
         {

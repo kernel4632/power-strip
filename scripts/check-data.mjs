@@ -4,7 +4,7 @@ import { createServer } from 'vite'
 const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true } })
 try {
   const { MEASURED_GROUPS: groups, MEASURED_TOTAL: total } = await server.ssrLoadModule('/src/data/measured.ts')
-  const { DEVICE_CATALOG: devices, STATIONS, deviceReading } = await server.ssrLoadModule('/src/data/catalog.ts')
+  const { DEVICE_CATALOG: devices, STATIONS } = await server.ssrLoadModule('/src/data/catalog.ts')
   const { SCENE_MEASURED_GROUPS: sceneGroups, SCENE_MEASURED_TOTAL: sceneTotal } = await server.ssrLoadModule('/src/data/sceneMeasured.ts')
   const { STRIP_SPECS: strips, DESK_STRIP } = await server.ssrLoadModule('/src/data/strips.ts')
   const { DEVICE_REFERENCES: references, DEVICE_REFERENCE_MAP: refMap, POWER_SOURCE, STRIP_SOURCE, DEVICE_SOURCE } = await server.ssrLoadModule('/src/data/references.ts')
@@ -61,12 +61,12 @@ try {
     near(represented.reduce((sum,g) => sum+g.series[i],0), sceneTotal.series[i])
     store.getState().tick(0, at(i).getTime())
     near(Object.values(store.getState().devices).reduce((sum,d) => sum+d.watts,0), expected)
-    for (const g of represented) near(devices.filter(d=>d.measuredGroup===g.id).reduce((sum,d)=>sum+deviceReading(d).watts,0),nameplate(g))
+    for (const g of represented) near(devices.filter(d=>d.measuredGroup===g.id).reduce((sum,d)=>sum+d.referenceWatts,0),nameplate(g))
   }
   // Even the formerly all-zero 11:40 interval leaves every switch-on model powered.
   store.getState().tick(0, Date.parse('2026-10-22T11:40:00+08:00'))
   assert.ok(Object.values(store.getState().devices).every(d => d.watts > 0))
-  const laptopW = deviceReading(devices.find(d => d.id === 's1-laptop')).watts
+  const laptopW = devices.find(d => d.id === 's1-laptop').referenceWatts
   const target='s1-laptop', now=at(0).getTime()
   store.getState().toggle(target)
   assert.equal(store.getState().devices[target].watts,0)

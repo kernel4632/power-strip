@@ -49,14 +49,11 @@ export interface DeviceSpec {
   cablePort: Point3
   defaultOn: boolean
 }
-/** 功率读数的来源，决定界面上挂哪个徽章。 */
-export type PowerSource = 'nameplate'
 export interface DeviceState {
   on: boolean
   level: number
   watts: number
   energyWh: number
-  powerSource: PowerSource
 }
 export interface PowerSample {
   time: number

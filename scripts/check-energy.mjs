@@ -10,17 +10,17 @@ try {
   const initial = store.getState()
   const near = (a, b, tolerance = 1e-8) => assert.ok(Math.abs(a - b) < tolerance, `${a} != ${b}`)
   const laptop = () => store.getState().devices['s1-laptop']
-  // Historical fixture: 3746e49, 230 W, phase 0, sixty one-second ticks.
+  // 历史基准：3746e49，230 W，序号 0，连续 60 次一秒步进。
   for (let i = 0; i < 60; i++) store.getState().tick(1, Date.now())
   near(laptop().watts, 217.07793626510633)
   near(laptop().energyWh, 3.7232461942616575)
   store.setState(initial, true)
-  // Delayed updates retain the full elapsed minute (the old cap lost 55 seconds).
+  // 补跑要算满整段时间（旧版最多只算 5 秒，会漏掉 55 秒）。
   store.getState().tick(60, Date.now())
   const delayed = laptop()
   assert.equal(store.getState().sessionSeconds, 60)
   assert.ok(delayed.energyWh > 3.6 && delayed.energyWh < 3.84)
-  // Check events between timer ticks, with one shared monotonic clock.
+  // 定时器两次 tick 之间的控制事件，共用同一个单调时钟。
   store.setState(initial, true)
   let clock = 0
   mock.method(performance, 'now', () => clock)
@@ -39,13 +39,15 @@ try {
   assert.equal(laptop().watts, 0)
   assert.equal(store.getState().sessionSeconds, 60)
   const energy = laptop().energyWh
-  store.getState().sync() // Same timestamp cannot count twice.
+  store.getState().sync() // 同一时间戳不能重复累计。
   near(laptop().energyWh, energy)
-  store.getState().sync(59000) // A backwards clock cannot subtract energy/time.
+  store.getState().sync(59000) // 时钟倒退不能扣减电量或时长。
   near(laptop().energyWh, energy)
   assert.equal(store.getState().sessionSeconds, 60)
-  assert.deepEqual(formatEnergy(0), { value: '0.0000', unit: 'kWh' })
-  assert.deepEqual(formatEnergy(3.7232461942616575), { value: '0.0037', unit: 'kWh' })
-  assert.deepEqual(formatEnergy(1000), { value: '1.0000', unit: 'kWh' })
-  console.log('Energy checks passed: historical 3746e49 fixture, delayed ticks, control boundaries, power-off, monotonic clock and four-decimal kWh.')
+  // 显示：不足 1 kWh 用 Wh，满 1 kWh 换成两位小数的 kWh。
+  assert.deepEqual(formatEnergy(0), { value: '0.00', unit: 'Wh' })
+  assert.deepEqual(formatEnergy(3.7232461942616575), { value: '3.72', unit: 'Wh' })
+  assert.deepEqual(formatEnergy(999), { value: '999.0', unit: 'Wh' })
+  assert.deepEqual(formatEnergy(1000), { value: '1.00', unit: 'kWh' })
+  console.log('Energy checks passed: historical 3746e49 fixture, full-interval ticks, control boundaries, power-off, monotonic clock and Wh/kWh display threshold.')
 } finally { mock.restoreAll(); await server.close() }
