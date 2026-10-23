@@ -114,9 +114,10 @@ function sampleSurface(surface: Surface, x: number, y: number) {
     const pore = pfbm(u * 4, pv * 60, 4, 60, 2, 3)
     const fleck = pfbm(u * 12, pv * 160, 12, 160, 2, 7)
     return {
-      tone: -(ring * 0.5 + pore * 0.12 + fleck * 0.05 + seam * 0.85),
-      height: 1 - ring * 0.45 - pore * 0.3 - fleck * 0.12 - seam * 0.7,
-      rough: ring * 0.2 + pore * 0.14 + seam * 0.18,
+      // Veneer is a flat surface, not ridged decking. Keep grain mostly in albedo.
+      tone: -(ring * 0.18 + pore * 0.08 + fleck * 0.03 + seam * 0.18),
+      height: 1 - ring * 0.07 - pore * 0.1 - fleck * 0.04 - seam * 0.08,
+      rough: ring * 0.08 + pore * 0.08 + seam * 0.04,
     }
   }
   if (surface === 'fabric') {
@@ -196,10 +197,7 @@ export function surfaceMaps(surface: Surface): SurfaceMaps {
       colorImage.data[offset + 1] = base
       colorImage.data[offset + 2] = base
       colorImage.data[offset + 3] = 255
-      const roughness = Math.max(
-        0,
-        Math.min(1, 1 - 0.35 + sample.rough * 0.8),
-      )
+      const roughness = Math.max(0, Math.min(1, 1 - 0.35 + sample.rough * 0.8))
       const value = roughness * 255
       roughImage.data[offset] = value
       roughImage.data[offset + 1] = value
@@ -243,7 +241,13 @@ export function surfaceMaps(surface: Surface): SurfaceMaps {
     normalMap: normalTexture,
     roughnessMap: roughnessTexture,
     normalScale:
-      surface === 'fabric' ? 0.9 : surface === 'wood' ? 0.85 : surface === 'paint' ? 0.18 : 0.3,
+      surface === 'fabric'
+        ? 0.35
+        : surface === 'wood'
+          ? 0.25
+          : surface === 'paint'
+            ? 0.14
+            : 0.14,
   }
   cache.set(surface, maps)
   return maps

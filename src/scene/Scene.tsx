@@ -1,13 +1,19 @@
 import { Suspense, memo, useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, PerformanceMonitor } from '@react-three/drei'
-import { Environment, Lightformer } from '@react-three/drei'
+import {
+  ContactShadows,
+  Environment,
+  Lightformer,
+  OrbitControls,
+  PerformanceMonitor,
+} from '@react-three/drei'
 import hdriUrl from '@/assets/env/brown_studio_1k.hdr?url'
 import {
   Box3,
   Color,
   Matrix4,
   Mesh,
+  Object3D,
   PCFShadowMap,
   PerspectiveCamera,
   Vector3,
@@ -31,6 +37,8 @@ import { Appliance } from './Appliance'
 import { DormRoom } from './DormRoom'
 import { PowerStrip } from './PowerStrip'
 import { placeHotspots, type HotspotBox } from '@/lib/hotspot-layout'
+import { inspectSceneGeometry } from './geometryInspection'
+import { FLOOR_TOP } from './RoomObjects'
 
 function CameraRig() {
   const controls = useRef<OrbitControlsImpl>(null),
@@ -271,23 +279,28 @@ function Lighting({ night }: { night: boolean }) {
     ),
     [dark] = useState(() => sceneColor('--scene-night', '#263338')),
     background = useRef(day.clone())
+  const [sunTarget] = useState(() => {
+    const target = new Object3D()
+    target.position.set(-0.7, FLOOR_TOP, 1.9)
+    return target
+  })
   useFrame(({ scene, invalidate }, delta) => {
     const d = 1 - Math.exp(-Math.min(delta, 0.1) * 3)
     const instant = matchMedia('(prefers-reduced-motion: reduce)').matches
     if (ambient.current)
       ambient.current.intensity = instant
         ? night
-          ? 0.18
-          : 0.38
+          ? 0.12
+          : 0.32
         : ambient.current.intensity +
-          ((night ? 0.18 : 0.38) - ambient.current.intensity) * d
+          ((night ? 0.12 : 0.32) - ambient.current.intensity) * d
     if (sun.current)
       sun.current.intensity = instant
         ? night
-          ? 0.25
-          : 3.1
+          ? 0.16
+          : 2.65
         : sun.current.intensity +
-          ((night ? 0.25 : 3.1) - sun.current.intensity) * d
+          ((night ? 0.16 : 2.65) - sun.current.intensity) * d
     if (instant) background.current.copy(night ? dark : day)
     else background.current.lerp(night ? dark : day, d)
     scene.background = background.current
@@ -296,72 +309,36 @@ function Lighting({ night }: { night: boolean }) {
   })
   return (
     <>
-      <ambientLight ref={ambient} intensity={0.38} />
-      <hemisphereLight args={['#e8e0cf', '#8d7b62', 0.32]} />
+      <ambientLight ref={ambient} intensity={0.32} />
+      <hemisphereLight args={['#d8e1df', '#aa9e84', night ? 0.2 : 0.42]} />
+      <primitive object={sunTarget} />
       <directionalLight
         ref={sun}
-        position={[6.5, 2.6, -8.5]}
-        intensity={3.4}
-        color="#ffcf95"
+        position={[2.8, 4.2, -8.5]}
+        target={sunTarget}
+        intensity={2.65}
+        color={night ? '#afc6d5' : '#ffdfb3'}
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-8}
-        shadow-camera-right={8}
-        shadow-camera-top={8}
-        shadow-camera-bottom={-8}
+        shadow-camera-left={-6}
+        shadow-camera-right={6}
+        shadow-camera-top={6}
+        shadow-camera-bottom={-6}
         shadow-camera-near={0.5}
-        shadow-camera-far={40}
-        shadow-normalBias={0.018}
-        shadow-bias={-0.0001}
+        shadow-camera-far={24}
+        shadow-normalBias={0.008}
+        shadow-bias={-0.00008}
       />
       <directionalLight
-        position={[-5.5, 3.2, 5.5]}
-        color="#a9c4ce"
-        intensity={0.55}
-      />
-      <directionalLight
-        position={[6, 3, -8]}
-        color="#ffd7a3"
-        intensity={1.05}
+        position={[-1, 4.5, 5]}
+        color="#d2dfe0"
+        intensity={night ? 0.12 : 0.5}
       />
       <pointLight
-        position={[0.2, 1.25, 0.4]}
-        color="#ffd9b0"
-        intensity={night ? 0.35 : 0.85}
-        distance={4.6}
-        decay={2}
-      />
-      {[-1.92, 1.92].flatMap((x) =>
-        [-1.45, 1.3].map((z) => (
-          <pointLight
-            key={`${x}-${z}`}
-            position={[x, 1.22, z]}
-            color="#ffd6a6"
-            intensity={night ? 0.25 : 4.2}
-            distance={2.9}
-            decay={2}
-          />
-        )),
-      )}
-      <pointLight
-        position={[1.35, 0.85, 1.9]}
-        color="#ffcf9a"
-        intensity={night ? 0.3 : 7.5}
-        distance={3.4}
-        decay={2}
-      />
-      <pointLight
-        position={[0, 1.45, 1.35]}
-        color="#ffd2a0"
-        intensity={night ? 0.4 : 2.2}
-        distance={4.2}
-        decay={2}
-      />
-      <pointLight
-        position={[0, 2.7, -2.6]}
+        position={[0, 2.97, -2.95]}
         color="#ffd9a6"
-        intensity={night ? 1.2 : 0.12}
-        distance={5}
+        intensity={night ? 1.5 : 0}
+        distance={5.5}
       />
     </>
   )
@@ -376,8 +353,8 @@ function StudioEnvironment({ night }: { night: boolean }) {
     <Suspense fallback={<PlaceholderEnvironment intensity={0.32} />}>
       <Environment
         files={hdriUrl}
-        environmentIntensity={night ? 0.12 : 0.52}
-        environmentRotation={[0, 0.7, 1.1]}
+        environmentIntensity={night ? 0.1 : 0.32}
+        environmentRotation={[0, 0.7, 0]}
       />
     </Suspense>
   )
@@ -454,6 +431,7 @@ function Diagnostics() {
       })
       return {
         devices,
+        geometry: inspectSceneGeometry(scene),
         furnitureTargets: STATIONS.map((station) => {
           const point = new Vector3(
             ...toWorld(station, [-0.65, 0.86, 0.265]),
@@ -485,6 +463,8 @@ function Diagnostics() {
 export const Scene = memo(function Scene() {
   const night = usePowerStore((s) => s.night),
     [dpr, setDpr] = useState(1.35)
+  const station = usePowerStore((s) => s.activeStation)
+  const cutaway = usePowerStore((s) => s.cutaway)
   return (
     <Canvas
       frameloop="demand"
@@ -518,6 +498,16 @@ export const Scene = memo(function Scene() {
       <StudioEnvironment night={night} />
       <Diagnostics />
       <DormRoom night={night} />
+      <ContactShadows
+        key={`${station}-${cutaway}-${night}`}
+        position={[0, FLOOR_TOP + 0.001, 0]}
+        scale={6.8}
+        opacity={0.3}
+        blur={1.7}
+        far={0.75}
+        resolution={512}
+        frames={2}
+      />
       {DEVICE_CATALOG.map((d) => (
         <Appliance key={d.id} id={d.id} />
       ))}

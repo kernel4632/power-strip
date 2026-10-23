@@ -94,6 +94,7 @@ export function StaticGeometry({
         material.opacity,
         material.depthWrite,
         object.castShadow,
+        object.receiveShadow,
       ].join('|')
       let batch = batches.get(key)
       if (!batch) {
