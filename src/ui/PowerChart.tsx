@@ -18,7 +18,7 @@ export function PowerChart({ history, device, station }: {
     .reduce((sum, spec) => sum + spec.referenceWatts, 0)
   return (
     <section className="space-y-2">
-      <h3 className="text-body text-muted-foreground">本次功率</h3>
+      <h3 className="text-body text-muted-foreground">本次功率 · 模拟</h3>
       <Sparkline
         data={data}
         unit="W"

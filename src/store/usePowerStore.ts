@@ -90,6 +90,12 @@ function recordPower(history: PowerSample[], devices: Record<DeviceId, DeviceSta
   const time = Math.max(Number.isFinite(now) ? now : Date.now(), lastTime + 1)
   return [...history, powerSample(devices, time)].slice(-90)
 }
+/** Restored from 3746e49: deterministic demo fluctuation, not measured data.
+ * Each device has a different phase; the factor stays between 94% and 100%.
+ */
+function powerWave(elapsed: number, index: number) {
+  return 0.97 + 0.03 * Math.sin(elapsed * 0.7 + index * 2)
+}
 /** Update readouts in the same transaction as switches and sliders. */
 function withPower(
   state: PowerState,
@@ -97,14 +103,19 @@ function withPower(
 ): Partial<PowerState> {
   const next = { ...state, ...changes }
   const devices = Object.fromEntries(
-    DEVICE_CATALOG.map((spec) => {
+    DEVICE_CATALOG.map((spec, index) => {
       const device = next.devices[spec.id]
+      const previous = state.devices[spec.id]
       const powered = next.masterOn && next.strips[spec.stationId] && device.on
+      // Scale the current wave when dragging; do not reset other devices.
+      const watts = !powered ? 0 : previous.watts > 0
+        ? previous.watts * (device.level / previous.level)
+        : deviceReading(spec).watts * device.level * powerWave(state.sessionSeconds, index)
       return [
         spec.id,
         {
           ...device,
-          watts: powered ? deviceReading(spec).watts * device.level : 0,
+          watts,
         },
       ]
     }),
@@ -259,16 +270,18 @@ export const usePowerStore = create<PowerState>()((set) => ({
       )
       const elapsed = state.sessionSeconds + dt
       const devices = { ...state.devices }
-      DEVICE_CATALOG.forEach((spec) => {
+      DEVICE_CATALOG.forEach((spec, index) => {
         const device = state.devices[spec.id]
         const powered = state.masterOn && state.strips[spec.stationId]
         const reading = deviceReading(spec)
         const target = !powered
           ? 0
           : device.on
-            ? reading.watts * device.level
+            ? reading.watts * device.level * powerWave(elapsed, index)
             : 0
-        const watts = target
+        const watts = !powered || !device.on
+          ? 0
+          : device.watts + (target - device.watts) * (1 - Math.exp(-dt * 2.5))
         devices[spec.id] = {
           ...device,
           watts,

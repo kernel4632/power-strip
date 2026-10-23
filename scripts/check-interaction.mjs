@@ -89,7 +89,9 @@ try {
   store.getState().setLevel('s1-laptop', 0.1)
   store.getState().toggle('s1-laptop')
   store.getState().toggle('s1-laptop')
-  assert.deepEqual(store.getState().history.slice(-4).map(s => s.devices['s1-laptop']), [115, 23, 0, 23])
+  const drag = store.getState().history.slice(-4).map(s => s.devices['s1-laptop'])
+  assert.deepEqual(drag.slice(0, 3), [115, 23, 0])
+  assert.ok(drag[3] >= 23 * 0.94 && drag[3] <= 23)
   store.getState().setStrip('s1', false)
   assert.equal(store.getState().history.at(-1).stations.s1, 0)
   store.getState().setMaster(false)
@@ -100,6 +102,8 @@ try {
   for (let i = 0; i < 120; i++) store.getState().tick(1, Date.now() + i * 1000)
   const history = store.getState().history
   assert.equal(history.length, 90, 'sample buffer is bounded')
+  assert.ok(new Set(history.map(s => s.devices['s1-laptop'].toFixed(1))).size > 20, 'power keeps changing with the slider untouched')
+  assert.ok(history.some(s => Math.abs(s.devices['s1-laptop'] - s.devices['s3-laptop']) > 1), 'identical devices have different phases')
   assert.ok(history.every((s, i) => i === 0 || s.time > history[i - 1].time))
   for (const sample of history) {
     assert.equal(sample.total, Object.values(sample.devices).reduce((sum, watts) => sum + watts, 0))
@@ -107,8 +111,14 @@ try {
       assert.equal(sample.stations[station], DEVICE_CATALOG.filter(d => d.stationId === station).reduce((sum, d) => sum + sample.devices[d.id], 0))
   }
   assert.deepEqual(SCENE_MEASURED_TOTAL.series, recorded, 'controls do not rewrite 24-hour records')
+  // Turning off upstream power must stop both the wave and energy accumulation.
+  store.getState().setMaster(false)
+  const energyBeforeOff = Object.values(store.getState().devices).map(d => d.energyWh)
+  store.getState().tick(1, Date.now() + 130000)
+  assert.equal(store.getState().history.at(-1).total, 0)
+  assert.deepEqual(Object.values(store.getState().devices).map(d => d.energyWh), energyBeforeOff)
   console.log(
-    'Interaction checks passed: hotspot collision/edges, shared precision, panel state, immediate slider/switch chart samples, aggregate curves, bounded history and unchanged daily records.',
+    'Interaction checks passed: hotspot collision/edges, panel state, immediate samples, continuous fluctuation with distinct phases, aggregate curves, bounded history, power-off and unchanged daily records.',
   )
 } finally {
   await server.close()

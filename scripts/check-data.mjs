@@ -10,6 +10,7 @@ try {
   const { DEVICE_REFERENCES: references, DEVICE_REFERENCE_MAP: refMap, POWER_SOURCE, STRIP_SOURCE, DEVICE_SOURCE } = await server.ssrLoadModule('/src/data/references.ts')
   const { usePowerStore: store } = await server.ssrLoadModule('/src/store/usePowerStore.ts')
   const near = (a, b) => assert.ok(Math.abs(a-b) < 1e-7, `${a} != ${b}`)
+  const inWaveRange = (watts, ceiling) => assert.ok(watts >= ceiling * 0.94 - 1e-7 && watts <= ceiling + 1e-7, `${watts} outside simulated range for ${ceiling}`)
   const at = i => new Date(Date.parse('2026-10-22T00:00:00+08:00') + i * 600000)
   assert.equal(groups.length, 12)
   assert.equal(strips.length, 12)
@@ -71,10 +72,20 @@ try {
   assert.equal(store.getState().devices[target].watts,0)
   near(store.getState().devices['s3-laptop'].watts,laptopW)
   store.getState().toggle(target); store.getState().setLevel(target,0.5)
-  near(store.getState().devices[target].watts,laptopW/2)
+  inWaveRange(store.getState().devices[target].watts,laptopW/2)
   const start=store.getState().devices[target].energyWh
-  for(let t=1;t<=60;t++) store.getState().tick(1,now+t*1000)
-  near(store.getState().devices[target].energyWh-start,laptopW/120)
+  let integrated = 0
+  const readings = []
+  for(let t=1;t<=60;t++) {
+    const previous = store.getState().devices[target].watts
+    store.getState().tick(1,now+t*1000)
+    const watts = store.getState().devices[target].watts
+    inWaveRange(watts,laptopW/2)
+    readings.push(watts)
+    integrated += (previous + watts) / 2 / 3600
+  }
+  assert.ok(Math.max(...readings) - Math.min(...readings) > 5, 'unchanged 50% load must keep fluctuating')
+  near(store.getState().devices[target].energyWh-start, integrated)
   store.getState().setStrip('s1',false)
   assert.ok(devices.filter(d=>d.stationId==='s1').every(d=>store.getState().devices[d.id].watts===0))
   store.getState().setMaster(false)
@@ -84,20 +95,22 @@ try {
   store.getState().setStrip('s1',true)
   assert.equal(store.getState().devices[target].watts,0)
   store.getState().setMaster(true)
-  near(store.getState().devices[target].watts,laptopW/2)
+  inWaveRange(store.getState().devices[target].watts,laptopW/2)
   store.getState().setMode('away')
   assert.ok(Object.values(store.getState().devices).every(d=>d.watts===0))
   store.getState().setMode('study')
   assert.ok(Object.values(store.getState().devices).every(d=>d.watts>0))
-  // Regression: a MacBook runs at its 35 W nameplate, not the group's 30 W per-unit recorded peak.
-  near(store.getState().devices['s2-laptop'].watts,35)
-  near(store.getState().devices['s4-laptop'].watts,35)
+  // MacBook fluctuation is based on its 35 W reference, never the recorded 30 W peak.
+  inWaveRange(store.getState().devices['s2-laptop'].watts,35)
+  inWaveRange(store.getState().devices['s4-laptop'].watts,35)
+  const macBefore = store.getState().devices['s2-laptop'].watts
+  const otherMac = store.getState().devices['s4-laptop'].watts
   store.getState().setLevel('s2-laptop',0.5)
-  near(store.getState().devices['s2-laptop'].watts,17.5)
-  near(store.getState().devices['s4-laptop'].watts,35)
+  near(store.getState().devices['s2-laptop'].watts,macBefore/2)
+  near(store.getState().devices['s4-laptop'].watts,otherMac)
   store.getState().setLevel('s2-laptop',1)
-  near(store.getState().devices['s2-laptop'].watts,35)
+  near(store.getState().devices['s2-laptop'].watts,macBefore)
   store.getState().toggle('s2-laptop')
   assert.equal(store.getState().devices['s2-laptop'].watts,0)
-  console.log('Data checks passed: workbook provenance, scene-only scope (6 groups / 14 devices), 3.361167 kWh / 590 W historical peak, 144 intervals, nameplate allocation, clock independence, immediate switches, MacBook 100%/50%/off and session energy.')
+  console.log('Data checks passed: workbook provenance, scene scope, historical totals, 144 intervals, reference-based fluctuation bounds, clock independence, immediate switches, isolated load scaling and integrated energy.')
 } finally { await server.close() }
