@@ -1,7 +1,12 @@
 import { Suspense, memo, useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, PerformanceMonitor } from '@react-three/drei'
-import { Environment, Lightformer } from '@react-three/drei'
+import {
+  ContactShadows,
+  Environment,
+  Lightformer,
+  OrbitControls,
+  PerformanceMonitor,
+} from '@react-three/drei'
 import hdriUrl from '@/assets/env/brown_studio_1k.hdr?url'
 import {
   Box3,
@@ -518,6 +523,15 @@ export const Scene = memo(function Scene() {
       <StudioEnvironment night={night} />
       <Diagnostics />
       <DormRoom night={night} />
+      <ContactShadows
+        position={[0, 0.098, 0]}
+        scale={7.2}
+        opacity={0.38}
+        blur={2.4}
+        far={3}
+        resolution={512}
+        frames={1}
+      />
       {DEVICE_CATALOG.map((d) => (
         <Appliance key={d.id} id={d.id} />
       ))}

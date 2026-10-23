@@ -15,6 +15,41 @@ const PAPER = '#f2eada'
 const CABINET_SHELL = '#8a7b63'
 const CABINET_DOOR = '#7f8d7d'
 const CABINET_INNER = '#b9ab92'
+const NAME_TAG: Record<StationId, string> = {
+  s1: '林',
+  s2: '周',
+  s3: '陈',
+  s4: '王',
+}
+
+function NameTag({ name, position }: { name: string; position: Point3 }) {
+  const [texture] = useState(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 256
+    canvas.height = 128
+    const c = canvas.getContext('2d')!
+    c.fillStyle = '#efe7d4'
+    c.fillRect(0, 0, 256, 128)
+    c.strokeStyle = '#c9bda5'
+    c.lineWidth = 6
+    c.strokeRect(5, 5, 246, 118)
+    c.fillStyle = '#3d423c'
+    c.font = '700 76px serif'
+    c.textAlign = 'center'
+    c.textBaseline = 'middle'
+    c.fillText(name, 128, 70)
+    const t = new CanvasTexture(canvas)
+    t.colorSpace = SRGBColorSpace
+    return t
+  })
+  useEffect(() => () => texture.dispose(), [texture])
+  return (
+    <mesh position={position}>
+      <planeGeometry args={[0.14, 0.07]} />
+      <meshStandardMaterial map={texture} roughness={0.92} />
+    </mesh>
+  )
+}
 
 const CHAIR_POSE: Record<
   StationId,
@@ -225,68 +260,289 @@ function BookSet({ position, color }: { position: Point3; color: string }) {
     </group>
   )
 }
+const CHAIR_VARIANT: Record<StationId, 'task' | 'wood' | 'stool' | 'folding'> =
+  {
+    s1: 'task',
+    s2: 'stool',
+    s3: 'wood',
+    s4: 'folding',
+  }
+
 function Chair({
   color,
   rotation = -0.08,
   x = -0.27,
   z = 0.83,
+  variant = 'task',
 }: {
   color: string
   rotation?: number
   x?: number
   z?: number
+  variant?: 'task' | 'wood' | 'stool' | 'folding'
 }) {
   return (
     <group position={[x, 0.094, z]} rotation={[0, rotation, 0]}>
-      <Box
-        size={[0.43, 0.065, 0.4]}
-        position={[0, 0.4, 0]}
-        color={color}
-        round={0.02}
-        surface="fabric"
-      />
-      <Box
-        size={[0.39, 0.32, 0.043]}
-        position={[0, 0.68, 0.175]}
-        rotation={[-0.1, 0, 0]}
-        color={color}
-        round={0.018}
-        surface="fabric"
-      />
-      {[-0.17, 0.17].map((x) => (
-        <group key={x}>
+      {variant === 'task' && (
+        <>
+          <Box
+            size={[0.43, 0.065, 0.4]}
+            position={[0, 0.4, 0]}
+            color={color}
+            round={0.02}
+            surface="fabric"
+          />
+          <Box
+            size={[0.39, 0.32, 0.043]}
+            position={[0, 0.68, 0.175]}
+            rotation={[-0.1, 0, 0]}
+            color={color}
+            round={0.018}
+            surface="fabric"
+          />
+          {[-0.17, 0.17].map((x) => (
+            <group key={x}>
+              <Rod
+                from={[x, 0.025, -0.14]}
+                to={[x, 0.38, -0.12]}
+                radius={0.012}
+                color={STEEL}
+              />
+              <Rod
+                from={[x, 0.025, 0.18]}
+                to={[x, 0.79, 0.19]}
+                radius={0.012}
+                color={STEEL}
+              />
+              {[-0.14, 0.18].map((z) => (
+                <Cylinder
+                  key={z}
+                  radius={0.016}
+                  height={0.025}
+                  position={[x, 0.0125, z]}
+                  color="#454f48"
+                />
+              ))}
+            </group>
+          ))}
           <Rod
-            from={[x, 0.025, -0.14]}
-            to={[x, 0.38, -0.12]}
-            radius={0.012}
+            from={[-0.17, 0.16, 0.18]}
+            to={[0.17, 0.16, 0.18]}
+            radius={0.01}
             color={STEEL}
           />
-          <Rod
-            from={[x, 0.025, 0.18]}
-            to={[x, 0.79, 0.19]}
-            radius={0.012}
-            color={STEEL}
+        </>
+      )}
+      {variant === 'stool' && (
+        <>
+          <Box
+            size={[0.38, 0.045, 0.34]}
+            position={[0, 0.43, 0]}
+            color="#b18d63"
+            round={0.012}
+            surface="wood"
           />
-          {[-0.14, 0.18].map((z) => (
-            <Cylinder
-              key={z}
-              radius={0.016}
-              height={0.025}
-              position={[x, 0.0125, z]}
-              color="#454f48"
+          {[-0.15, 0.15].flatMap((x) =>
+            [-0.12, 0.12].map((z) => (
+              <Rod
+                key={`${x}-${z}`}
+                from={[x, 0.015, z]}
+                to={[x * 0.86, 0.4, z * 0.86]}
+                radius={0.013}
+                color="#5a4a38"
+              />
+            )),
+          )}
+          <Rod
+            from={[-0.13, 0.17, -0.1]}
+            to={[0.13, 0.17, -0.1]}
+            radius={0.008}
+            color="#5a4a38"
+          />
+          <Rod
+            from={[-0.13, 0.17, 0.1]}
+            to={[0.13, 0.17, 0.1]}
+            radius={0.008}
+            color="#5a4a38"
+          />
+          <Box
+            size={[0.3, 0.06, 0.26]}
+            position={[0, 0.49, 0]}
+            rotation={[0, 0.12, 0]}
+            color={color}
+            round={0.03}
+            surface="fabric"
+          />
+        </>
+      )}
+      {variant === 'wood' && (
+        <>
+          <Box
+            size={[0.42, 0.05, 0.38]}
+            position={[0, 0.42, 0]}
+            color="#a77b4f"
+            round={0.008}
+            surface="wood"
+          />
+          {[-0.16, 0.16].map((x) => (
+            <group key={x}>
+              <Rod
+                from={[x, 0.01, -0.13]}
+                to={[x, 0.4, -0.12]}
+                radius={0.015}
+                color="#7a5a3c"
+              />
+              <Rod
+                from={[x, 0.01, 0.15]}
+                to={[x, 0.86, 0.17]}
+                radius={0.015}
+                color="#7a5a3c"
+              />
+            </group>
+          ))}
+          {[0.55, 0.68, 0.81].map((y) => (
+            <Box
+              key={y}
+              size={[0.32, 0.055, 0.02]}
+              position={[0, y, 0.17]}
+              color="#b98a5c"
+              surface="wood"
+              round={0.004}
             />
           ))}
-        </group>
-      ))}
-      <Rod
-        from={[-0.17, 0.16, 0.18]}
-        to={[0.17, 0.16, 0.18]}
-        radius={0.01}
-        color={STEEL}
-      />
+          <Box
+            size={[0.32, 0.018, 0.36]}
+            position={[0, 0.17, 0.1]}
+            color="#8b6747"
+            surface="wood"
+          />
+        </>
+      )}
+      {variant === 'folding' && (
+        <>
+          <Box
+            size={[0.4, 0.035, 0.34]}
+            position={[0, 0.4, 0]}
+            rotation={[-0.04, 0, 0]}
+            color={color}
+            round={0.012}
+            surface="fabric"
+          />
+          <Box
+            size={[0.36, 0.27, 0.025]}
+            position={[0, 0.66, 0.14]}
+            rotation={[-0.18, 0, 0]}
+            color={color}
+            round={0.01}
+            surface="fabric"
+          />
+          {[-0.17, 0.17].map((x) => (
+            <group key={x}>
+              <Rod
+                from={[x, 0.02, -0.15]}
+                to={[x * 0.75, 0.41, 0.12]}
+                radius={0.009}
+                color="#6d7772"
+              />
+              <Rod
+                from={[x, 0.02, 0.16]}
+                to={[x * 0.75, 0.41, -0.12]}
+                radius={0.009}
+                color="#6d7772"
+              />
+              <Rod
+                from={[x * 0.75, 0.41, 0.12]}
+                to={[x * 0.7, 0.78, 0.15]}
+                radius={0.009}
+                color="#6d7772"
+              />
+            </group>
+          ))}
+        </>
+      )}
     </group>
   )
 }
+function SchedulePoster({ position }: { position: Point3 }) {
+  const [texture] = useState(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 384
+    canvas.height = 512
+    const c = canvas.getContext('2d')!
+    c.fillStyle = '#f0e8d5'
+    c.fillRect(0, 0, 384, 512)
+    c.fillStyle = '#43564d'
+    c.font = '700 34px serif'
+    c.fillText('课程表', 26, 54)
+    c.font = '16px sans-serif'
+    c.fillStyle = '#7b8178'
+    c.fillText('2026 秋季 · 302', 26, 82)
+    const days = ['一', '二', '三', '四', '五']
+    const rows = ['高数', '英语', '电路', '实验', '体育']
+    c.font = '15px sans-serif'
+    days.forEach((d, i) => c.fillText(d, 70 + i * 60, 112))
+    rows.forEach((r, y) => {
+      c.fillStyle = '#8a9087'
+      c.fillText(r, 10, 155 + y * 62)
+      for (let x = 0; x < 5; x++) {
+        c.strokeStyle = '#c9c0ab'
+        c.strokeRect(58 + x * 60, 132 + y * 62, 52, 42)
+        if ((x + y * 2) % 4 === 0)
+          c.fillStyle = ['#b8c7b1', '#d8bfa2', '#aebfca'][(x + y) % 3]
+        else c.fillStyle = '#f7f1e1'
+        c.fillRect(60 + x * 60, 134 + y * 62, 48, 38)
+      }
+    })
+    const t = new CanvasTexture(canvas)
+    t.colorSpace = SRGBColorSpace
+    return t
+  })
+  useEffect(() => () => texture.dispose(), [texture])
+  return (
+    <mesh position={position}>
+      <planeGeometry args={[0.3, 0.4]} />
+      <meshStandardMaterial map={texture} roughness={0.95} />
+    </mesh>
+  )
+}
+
+function SafetyNotice({ position }: { position: Point3 }) {
+  const [texture] = useState(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 320
+    canvas.height = 440
+    const c = canvas.getContext('2d')!
+    c.fillStyle = '#f3ead8'
+    c.fillRect(0, 0, 320, 440)
+    c.fillStyle = '#b24e3f'
+    c.fillRect(0, 0, 320, 92)
+    c.fillStyle = '#fdf6e8'
+    c.font = '700 36px sans-serif'
+    c.fillText('宿舍安全用电', 18, 58)
+    c.fillStyle = '#3e4741'
+    c.font = '24px sans-serif'
+    ;['人走断电', '不私拉乱接', '不使用大功率', '发现异常先断电'].forEach(
+      (text, i) => {
+        c.fillStyle = i === 0 ? '#b24e3f' : '#3e4741'
+        c.fillText(`· ${text}`, 22, 150 + i * 62)
+      },
+    )
+    c.fillStyle = '#8b8f85'
+    c.font = '16px sans-serif'
+    c.fillText('后勤保障处 · 2026', 22, 408)
+    const t = new CanvasTexture(canvas)
+    t.colorSpace = SRGBColorSpace
+    return t
+  })
+  useEffect(() => () => texture.dispose(), [texture])
+  return (
+    <mesh position={position}>
+      <planeGeometry args={[0.24, 0.33]} />
+      <meshStandardMaterial map={texture} roughness={0.95} />
+    </mesh>
+  )
+}
+
 function DeskStructure({ station }: { station: StationSpec }) {
   const select = usePowerStore((s) => s.selectStation)
   return (
@@ -429,6 +685,55 @@ function DeskStructure({ station }: { station: StationSpec }) {
             />
           </group>
         ))}
+        {[0.735, 1.155].map((x) => (
+          <Box
+            key={`seam-${x}`}
+            size={[0.004, 1.53, 0.004]}
+            position={[x, 0.9, 0.328]}
+            color="#4a5048"
+          />
+        ))}
+        {[0.165, 1.15, 1.675].map((y) => (
+          <Box
+            key={`gap-${y}`}
+            size={[0.42, 0.004, 0.004]}
+            position={[0.945, y, 0.328]}
+            color="#4a5048"
+          />
+        ))}
+        {[
+          [1.16, 0.27],
+          [1.16, 1.0],
+          [1.16, 1.22],
+          [1.16, 1.58],
+        ].map(([x, y]) => (
+          <Box
+            key={`hinge-${y}`}
+            size={[0.014, 0.044, 0.008]}
+            position={[x, y, 0.332]}
+            color="#aeb5aa"
+            metalness={0.75}
+            round={0.002}
+          />
+        ))}
+        <Box
+          size={[0.43, 0.075, 0.02]}
+          position={[0.945, 0.052, 0.323]}
+          color="#4b4f46"
+        />
+        <NameTag name={NAME_TAG[station.id]} position={[0.86, 1.34, 0.329]} />
+        <group position={[-1.08, 1.2, -0.501]}>
+          <Box size={[0.1, 0.14, 0.012]} color="#e5decd" round={0.006} />
+          {[-0.02, 0.02].map((x) => (
+            <Box
+              key={x}
+              size={[0.018, 0.03, 0.006]}
+              position={[x, 0.005, 0.008]}
+              color="#5d665e"
+              round={0.004}
+            />
+          ))}
+        </group>
         {[-1.23, 1.23].flatMap((x) =>
           [-0.53, 0.53].map((z) => (
             <group key={`${x}-${z}`}>
@@ -536,7 +841,11 @@ function DeskStructure({ station }: { station: StationSpec }) {
             </group>
           ))}
         </group>
-        <Chair color={station.color} {...CHAIR_POSE[station.id]} />
+        <Chair
+          color={station.color}
+          {...CHAIR_POSE[station.id]}
+          variant={CHAIR_VARIANT[station.id]}
+        />
         <Box
           size={[0.11, 0.16, 0.024]}
           position={[-1.14, 1.04, -0.49]}
@@ -709,27 +1018,13 @@ function StationLife({ station }: { station: StationSpec }) {
             position={[-0.71, 0.925, 0.24]}
             color="#8fa09a"
           />
-          <group position={[-0.58, 1.42, -0.501]}>
-            <Box
-              size={[0.26, 0.33, 0.006]}
-              position={[0, 0, 0]}
-              rotation={[0, 0, 0.012]}
-              color="#efe9da"
-            />
-            {[-0.09, -0.03, 0.03, 0.09].map((y) => (
-              <Box
-                key={y}
-                size={[0.15, 0.003, 0.001]}
-                position={[0.02, y, 0.004]}
-                color="#aab3a8"
-              />
-            ))}
-            <Box
-              size={[0.05, 0.05, 0.012]}
-              position={[0, 0.16, 0.008]}
-              color="#7f9188"
-            />
-          </group>
+          <SchedulePoster position={[-0.58, 1.4, -0.501]} />
+          <Rod
+            from={[0.42, 0.874, 0.22]}
+            to={[0.58, 0.874, 0.28]}
+            radius={0.004}
+            color="#4e5650"
+          />
         </group>
       )}
       {id === 's2' && (
@@ -806,6 +1101,28 @@ function StationLife({ station }: { station: StationSpec }) {
             position={[0.12, 0.905, 0.22]}
             color="#c7b59a"
           />
+          <group position={[0.92, 1.18, -0.1]}>
+            <Box
+              size={[0.26, 0.15, 0.24]}
+              color="#b28a5f"
+              round={0.02}
+              surface="fabric"
+            />
+            {[-0.08, 0, 0.08].map((x) => (
+              <Box
+                key={x}
+                size={[0.004, 0.15, 0.245]}
+                position={[x, 0.075, 0]}
+                color="#96714b"
+              />
+            ))}
+            <Box
+              size={[0.27, 0.012, 0.25]}
+              position={[0, 0.155, 0]}
+              color="#c49d72"
+              round={0.005}
+            />
+          </group>
           <group position={[-0.52, 1.4, -0.501]}>
             <Box
               size={[0.3, 0.36, 0.006]}
@@ -832,6 +1149,37 @@ function StationLife({ station }: { station: StationSpec }) {
               size={[0.19, 0.0015, 0.14]}
               position={[0, 0.008, 0]}
               color="#a9b6ae"
+            />
+          </group>
+          <group position={[0.91, 1.18, -0.12]}>
+            <Cylinder
+              radius={0.055}
+              height={0.22}
+              position={[0, 0.13, 0]}
+              color="#b6483b"
+            />
+            <Cylinder
+              radius={0.058}
+              height={0.025}
+              position={[0, 0.25, 0]}
+              color="#3d3c38"
+            />
+            <Cylinder
+              radius={0.02}
+              height={0.02}
+              position={[0, 0.27, 0]}
+              color="#c9c1ac"
+            />
+            <Box
+              size={[0.06, 0.045, 0.002]}
+              position={[0, 0.14, 0.056]}
+              color="#efe7d3"
+            />
+            <Rod
+              from={[-0.052, 0.14, 0]}
+              to={[-0.11, 0.2, 0]}
+              radius={0.009}
+              color="#b6483b"
             />
           </group>
           {[
@@ -872,18 +1220,68 @@ function StationLife({ station }: { station: StationSpec }) {
             round={0.03}
             surface="fabric"
           />
-          {[
-            [-0.78, 1.44, -0.02],
-            [-0.56, 1.36, 0.06],
-            [-0.34, 1.45, -0.05],
-          ].map(([x, y, r]) => (
-            <Box
-              key={String(x)}
-              size={[0.18, 0.24, 0.005]}
-              position={[x, y, -0.501]}
-              rotation={[0, 0, Number(r)]}
-              color={look.pillow}
+          <group position={[-0.9, 0.3, 0.02]}>
+            <Cylinder radius={0.19} top={0.22} height={0.11} color="#4f7fa3" />
+            <Cylinder
+              radius={0.16}
+              top={0.18}
+              height={0.08}
+              position={[0, 0.015, 0]}
+              color="#6f9cba"
             />
+            <Ring
+              radius={0.2}
+              tube={0.012}
+              position={[0, 0.06, 0]}
+              color="#365f7c"
+            />
+            <Box
+              size={[0.2, 0.05, 0.13]}
+              position={[0.03, 0.075, 0.11]}
+              rotation={[0, 0.2, 0.05]}
+              color="#e2dccb"
+              surface="fabric"
+            />
+            <Box
+              size={[0.07, 0.025, 0.05]}
+              position={[-0.08, 0.075, -0.06]}
+              color="#d9c9a4"
+              round={0.01}
+            />
+          </group>
+          <Rod
+            from={[0.42, 0.874, 0.22]}
+            to={[0.58, 0.874, 0.28]}
+            radius={0.004}
+            color="#4e5650"
+          />
+          {[
+            [-0.78, 1.44, -0.02, '#b7644e'],
+            [-0.56, 1.36, 0.06, '#7e8fa0'],
+            [-0.34, 1.45, -0.05, '#c6a96a'],
+          ].map(([x, y, r, ink]) => (
+            <group
+              key={String(x)}
+              position={[Number(x), Number(y), -0.501]}
+              rotation={[0, 0, Number(r)]}
+            >
+              <Box size={[0.18, 0.24, 0.005]} color={look.pillow} />
+              <Box
+                size={[0.11, 0.016, 0.002]}
+                position={[-0.01, 0.055, 0.004]}
+                color="#59665f"
+              />
+              <Box
+                size={[0.07, 0.075, 0.002]}
+                position={[0.015, -0.015, 0.004]}
+                color={String(ink)}
+              />
+              <Box
+                size={[0.1, 0.006, 0.002]}
+                position={[-0.005, -0.075, 0.004]}
+                color="#8b9489"
+              />
+            </group>
           ))}
         </group>
       )}
@@ -949,16 +1347,26 @@ function StationLife({ station }: { station: StationSpec }) {
             surface="fabric"
           />
           {[
-            [-0.6, 1.42, 0.03],
-            [-0.3, 1.47, -0.04],
-          ].map(([x, y, r]) => (
-            <Box
+            [-0.6, 1.42, 0.03, '#8a9b91'],
+            [-0.3, 1.47, -0.04, '#b18462'],
+          ].map(([x, y, r, tint]) => (
+            <group
               key={String(x)}
-              size={[0.2, 0.15, 0.005]}
-              position={[x, y, -0.5]}
+              position={[Number(x), Number(y), -0.5]}
               rotation={[0, 0, Number(r)]}
-              color="#e6dfcc"
-            />
+            >
+              <Box size={[0.2, 0.15, 0.005]} color="#e6dfcc" />
+              <Box
+                size={[0.17, 0.12, 0.002]}
+                position={[0, 0.005, 0.004]}
+                color={String(tint)}
+              />
+              <Box
+                size={[0.05, 0.06, 0.003]}
+                position={[0.03, -0.01, 0.006]}
+                color="#4f5d55"
+              />
+            </group>
           ))}
         </group>
       )}
@@ -1105,6 +1513,29 @@ function Loft({ station }: { station: StationSpec }) {
             />
           </group>
         )}
+        <Box
+          size={[0.018, 0.26, 0.94]}
+          position={[1.175, 2.08, 0]}
+          rotation={[0, 0, 0.035]}
+          color={look.duvet}
+          surface="fabric"
+        />
+        <Box
+          size={[0.17, 0.018, 0.24]}
+          position={[1.06, 2.265, 0.34]}
+          rotation={[0, 0.32, 0.02]}
+          color={look.accent}
+          surface="fabric"
+        />
+        {[-0.12, 0.1, 0.3].map((x, i) => (
+          <Box
+            key={`crease-${x}`}
+            size={[0.002, 0.002, 0.72]}
+            position={[0.28 + x, 2.257, 0.02 + i * 0.04]}
+            rotation={[0, 0.04 - i * 0.03, 0]}
+            color={look.sheet}
+          />
+        ))}
         {[-0.31, 0.31].map((z) => (
           <Box
             key={z}
@@ -1178,6 +1609,108 @@ function Loft({ station }: { station: StationSpec }) {
   )
 }
 
+function RoomProps() {
+  return (
+    <StaticGeometry revision={0}>
+      <group position={[-1.72, 0, 2.98]} rotation={[0, 0.15, 0]}>
+        {[-0.24, 0.24].map((z) => (
+          <group key={z}>
+            <Rod
+              from={[-0.32, 0.02, z]}
+              to={[-0.18, 0.95, z]}
+              radius={0.014}
+              color="#9a7a55"
+            />
+            <Rod
+              from={[0.32, 0.02, z]}
+              to={[0.18, 0.95, z]}
+              radius={0.014}
+              color="#9a7a55"
+            />
+          </group>
+        ))}
+        {[0.35, 0.58, 0.8].map((y) => (
+          <Rod
+            key={y}
+            from={[-0.22, y, -0.24]}
+            to={[-0.22, y, 0.24]}
+            radius={0.009}
+            color="#b7976d"
+          />
+        ))}
+        <Box
+          size={[0.42, 0.46, 0.018]}
+          position={[-0.22, 0.57, 0.19]}
+          rotation={[0, 0.02, 0.03]}
+          color="#d8d2bf"
+          surface="fabric"
+        />
+        <Box
+          size={[0.12, 0.2, 0.014]}
+          position={[-0.22, 0.72, -0.2]}
+          color="#8e9c8f"
+          surface="fabric"
+        />
+      </group>
+      <group position={[1.3, 0.2, 2.78]}>
+        <Sphere scale={[0.12, 0.12, 0.12]} color="#b65f38" />
+        {[0, 1, 2].map((i) => (
+          <Ring
+            key={i}
+            radius={0.118}
+            tube={0.0035}
+            position={[0, 0, 0]}
+            rotation={[1.1 + i * 0.9, 0.3 + i * 0.7, 0]}
+            color="#3d3730"
+          />
+        ))}
+      </group>
+      <group position={[-0.62, 0, -2.98]} rotation={[0, 0.1, -0.05]}>
+        <Rod
+          from={[0, 0.05, 0]}
+          to={[0.02, 1.32, 0]}
+          radius={0.012}
+          color="#9b7a52"
+        />
+        <Box
+          size={[0.24, 0.06, 0.12]}
+          position={[0.01, 0.06, 0]}
+          color="#6f7568"
+          round={0.015}
+        />
+        {Array.from({ length: 9 }, (_, i) => (
+          <Box
+            key={i}
+            size={[0.018, 0.09, 0.018]}
+            position={[-0.09 + i * 0.023, 0.01, 0.01]}
+            color="#6a7065"
+          />
+        ))}
+      </group>
+      <group position={[0.72, 0, 2.95]}>
+        <Cylinder
+          radius={0.16}
+          top={0.17}
+          height={0.34}
+          position={[0, 0.17, 0]}
+          color="#7b8279"
+        />
+        <Ring
+          radius={0.165}
+          tube={0.012}
+          position={[0, 0.33, 0]}
+          color="#4f554e"
+        />
+        <Sphere
+          position={[0, 0.34, 0]}
+          scale={[0.13, 0.035, 0.12]}
+          color="#3f4540"
+        />
+      </group>
+    </StaticGeometry>
+  )
+}
+
 function RoomShell({ night }: { night: boolean }) {
   return (
     <StaticGeometry revision={night}>
@@ -1238,40 +1771,45 @@ function RoomShell({ night }: { night: boolean }) {
         <Box
           size={[3.02, 0.07, 0.06]}
           position={[0, 0.855, 0.09]}
-          color="#cbb99b"
+          color="#aab2ad"
         />
         <Box
           size={[3.02, 0.07, 0.06]}
           position={[0, -0.855, 0.09]}
-          color="#cbb99b"
+          color="#aab2ad"
         />
         <Box
           size={[0.07, 1.75, 0.06]}
           position={[-1.49, 0, 0.09]}
-          color="#cbb99b"
+          color="#aab2ad"
         />
         <Box
           size={[0.07, 1.75, 0.06]}
           position={[1.49, 0, 0.09]}
-          color="#cbb99b"
+          color="#aab2ad"
         />
         {[-0.99, 0, 0.99].map((x) => (
           <Box
             key={x}
             size={[0.04, 1.69, 0.035]}
             position={[x, 0, 0.1]}
-            color="#e0d8c6"
+            color="#c7cfc9"
           />
         ))}
         <Box
           size={[2.99, 0.035, 0.035]}
           position={[0, 0.12, 0.1]}
-          color="#e0d8c6"
+          color="#c7cfc9"
         />
         <Box
           size={[3.22, 0.045, 0.23]}
           position={[0, -0.89, 0.08]}
-          color="#c9b18a"
+          color="#b4bbb5"
+        />
+        <Box
+          size={[2.98, 0.022, 0.045]}
+          position={[0, 0.025, 0.115]}
+          color="#8f9994"
         />
         <Rod
           from={[-1.78, 0.99, 0.15]}
@@ -1318,7 +1856,75 @@ function RoomShell({ night }: { night: boolean }) {
         emissive="#f8e2af"
         intensity={night ? 0.5 : 0}
       />
-      <group position={[-2.02, 2.18, -3.235]}>
+      <group position={[-2.23, 1.09, -3.243]}>
+        <Box size={[0.8, 1.98, 0.045]} color="#c8bfab" round={0.006} />
+        <Box
+          size={[0.62, 0.68, 0.014]}
+          position={[0, -0.42, 0.03]}
+          color="#bdb29d"
+          round={0.004}
+        />
+        <Box
+          size={[0.62, 0.62, 0.014]}
+          position={[0, 0.38, 0.03]}
+          color="#bdb29d"
+          round={0.004}
+        />
+        <Box
+          size={[0.56, 0.6, 0.006]}
+          position={[0, -0.42, 0.04]}
+          color="#c6bca8"
+        />
+        <Box
+          size={[0.56, 0.54, 0.006]}
+          position={[0, 0.38, 0.04]}
+          color="#c6bca8"
+        />
+        <Cylinder
+          radius={0.022}
+          height={0.07}
+          rotation={[Math.PI / 2, 0, 0]}
+          position={[0.32, -0.02, 0.065]}
+          color="#8f9a92"
+          metalness={0.7}
+        />
+        {[-0.72, 0.7].map((y) => (
+          <Box
+            key={y}
+            size={[0.035, 0.09, 0.018]}
+            position={[-0.37, y, 0.04]}
+            color="#8f8a7b"
+            metalness={0.5}
+          />
+        ))}
+      </group>
+      <SafetyNotice position={[-2.23, 1.48, -3.215]} />
+      {[
+        [-2.65, 1.09, 2.14, 0.07],
+        [-1.81, 1.09, 2.14, 0.07],
+      ].map(([x, y, h, w]) => (
+        <Box
+          key={String(x)}
+          size={[w, h, 0.08]}
+          position={[x, y, -3.245]}
+          color="#9d9483"
+        />
+      ))}
+      <Box
+        size={[0.92, 0.07, 0.08]}
+        position={[-2.23, 2.14, -3.245]}
+        color="#9d9483"
+      />
+      <group position={[-1.68, 1.28, -3.235]}>
+        <Box size={[0.1, 0.14, 0.012]} color="#e4ddcc" round={0.006} />
+        <Box
+          size={[0.04, 0.055, 0.007]}
+          position={[0, 0.005, 0.01]}
+          color="#c3bbaa"
+          round={0.003}
+        />
+      </group>
+      <group position={[-2.02, 2.55, -3.235]}>
         <Box size={[0.72, 0.52, 0.028]} color="#9b7a55" round={0.008} />
         <Box
           size={[0.66, 0.46, 0.012]}
@@ -1482,6 +2088,16 @@ function RoomShell({ night }: { night: boolean }) {
           round={0.006}
         />
         <Box
+          size={[0.06, 0.002, 0.345]}
+          position={[0, 0.302, 0]}
+          color="#d8c49a"
+        />
+        <Box
+          size={[0.06, 0.3, 0.002]}
+          position={[0, 0.15, 0.172]}
+          color="#d8c49a"
+        />
+        <Box
           size={[0.36, 0.28, 0.3]}
           position={[0, 0.44, 0]}
           rotation={[0, 0.12, 0]}
@@ -1493,6 +2109,12 @@ function RoomShell({ night }: { night: boolean }) {
           position={[0, 0.585, 0]}
           rotation={[0, 0.12, 0]}
           color="#e6ddc9"
+        />
+        <Box
+          size={[0.18, 0.002, 0.12]}
+          position={[0.12, 0.33, 0.09]}
+          rotation={[0, 0.1, 0.55]}
+          color="#c9b58f"
         />
       </group>
       <group position={[0, 0.1, -2.92]}>
@@ -1537,6 +2159,7 @@ export function DormRoom({ night }: { night: boolean }) {
     <group name="four-person-dorm">
       <WindowView key={night ? 'night' : 'day'} night={night} />
       <RoomShell night={night} />
+      <RoomProps />
       <pointLight
         position={[0, 2.95, -1.8]}
         color="#ffe0b8"
