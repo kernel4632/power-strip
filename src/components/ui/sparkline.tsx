@@ -3,7 +3,7 @@ import { cn } from 'cn'
 import { Slider } from './slider'
 import { formatPower } from '@/lib/format'
 
-export type SparklinePoint = { label: string; value: number }
+export type SparklinePoint = { label: string; value: number; time?: number }
 
 /**
  * 轻量折线图，呈现本次 60 点与历史 144 点记录，不引入图表库：
@@ -15,12 +15,16 @@ export function Sparkline({
   unit = '',
   label,
   className,
+  maximum,
+  showControls = true,
 }: {
   data: SparklinePoint[]
   compact?: boolean
   unit?: string
   label: string
   className?: string
+  maximum?: number
+  showControls?: boolean
 }) {
   const summaryId = useId()
   const [active, setActive] = useState<number | null>(null)
@@ -46,12 +50,16 @@ export function Sparkline({
   // 变化幅度不足量程 5% 时按 5% 展开，否则半瓦的抖动会被放大成陡坡
   const scale = Math.max(spread * 1.5, Math.abs(rawMax) * 0.05, 2)
   const slack = (scale - spread) / 2
-  const low = Math.max(0, rawMin - slack)
-  const high = Math.max(low + 1, rawMax + slack)
+  const low = maximum === undefined ? Math.max(0, rawMin - slack) : 0
+  const high = maximum === undefined ? Math.max(low + 1, rawMax + slack) : Math.max(1, maximum, rawMax)
   const domain = high - low || 1
   const digits = domain >= 10 ? 0 : 1
 
-  const x = (index: number) => (index / (count - 1)) * 100
+  const start = data[0].time
+  const end = data[count - 1].time
+  const x = (index: number) => start !== undefined && end !== undefined && end > start
+    ? (((data[index].time ?? start) - start) / (end - start)) * 100
+    : (index / (count - 1)) * 100
   const y = (value: number) => 100 - ((value - low) / domain) * 100
   const line = data
     .map(
@@ -59,14 +67,15 @@ export function Sparkline({
         `${index === 0 ? 'M' : 'L'}${x(index).toFixed(2)},${y(point.value).toFixed(2)}`,
     )
     .join(' ')
-  const activePoint = active === null ? null : data[active]
+  const selectedIndex = active === null ? null : Math.min(active, count - 1)
+  const activePoint = selectedIndex === null ? null : data[selectedIndex]
   const activeOffset = active === null ? 0 : x(active)
   const readingIndex = Math.min(active ?? count - 1, count - 1)
   const reading = data[readingIndex]
 
   return (
     <div
-      role={compact ? 'img' : 'group'}
+      role={compact || !showControls ? 'img' : 'group'}
       aria-label={label}
       aria-describedby={summaryId}
       className={cn(
@@ -78,7 +87,7 @@ export function Sparkline({
       <p id={summaryId} className="sr-only">
         {data[0].label} 至 {data[count - 1].label}，最低 {formatPower(rawMin)}{' '}
         {unit}，最高 {formatPower(rawMax)} {unit}。
-        {!compact && '可用下方时间滑块和方向键读取每个时间点。'}
+        {!compact && showControls && '可用下方时间滑块和方向键读取每个时间点。'}
       </p>
       <div
         className={cn(
@@ -88,7 +97,7 @@ export function Sparkline({
         <div
           className={cn('relative touch-pan-y', compact ? 'h-full' : 'min-h-0')}
           onPointerDown={
-            compact
+            compact || !showControls
               ? undefined
               : (event) => {
                   const rect = event.currentTarget.getBoundingClientRect()
@@ -105,7 +114,7 @@ export function Sparkline({
                 }
           }
           onPointerMove={
-            compact
+            compact || !showControls
               ? undefined
               : (event) => {
                   const rect = event.currentTarget.getBoundingClientRect()
@@ -153,7 +162,7 @@ export function Sparkline({
               strokeLinecap="round"
               vectorEffect="non-scaling-stroke"
             />
-            {active !== null && !compact && (
+            {active !== null && !compact && showControls && (
               <line
                 x1={activeOffset}
                 y1="0"
@@ -166,7 +175,7 @@ export function Sparkline({
               />
             )}
           </svg>
-          {activePoint && !compact && (
+          {activePoint && !compact && showControls && (
             <div
               className={cn(
                 'pointer-events-none absolute top-0 whitespace-nowrap border border-border bg-popover px-2 py-1 font-sans text-xs text-popover-foreground',
@@ -198,7 +207,7 @@ export function Sparkline({
           </div>
         )}
       </div>
-      {!compact && (
+      {!compact && showControls && (
         <div>
           <div className="flex items-center justify-between gap-2 text-xs tabular-nums">
             <span className="text-muted-foreground">{reading.label}</span>

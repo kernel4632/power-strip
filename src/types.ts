@@ -34,7 +34,7 @@ export interface DeviceSpec {
   kind: DeviceKind
   name: string
   english: string
-  /** 组记录峰值均分到单台，用作 100% 负载参考和图表量程，不是额定功率。 */
+  /** 设备资料表中的单台参考功率，用作 100% 负载和本次曲线量程。 */
   referenceWatts: number
   measuredGroup: string
   /** 该资料组记录的是几台设备，用来把组合计功率折算成单台 */
@@ -57,4 +57,10 @@ export interface DeviceState {
   watts: number
   energyWh: number
   powerSource: PowerSource
+}
+export interface PowerSample {
+  time: number
+  total: number
+  devices: Record<DeviceId, number>
+  stations: Record<StationId, number>
 }

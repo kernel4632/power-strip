@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import {
   DEVICE_CATALOG,
   DEVICE_MAP,
+  STATIONS,
   deviceReading,
 } from '../data/catalog'
 import type {
@@ -9,6 +10,7 @@ import type {
   DeviceId,
   DeviceState,
   InspectionPart,
+  PowerSample,
   SceneMode,
   Selection,
   StationId,
@@ -32,6 +34,7 @@ function initialDevices(): Record<DeviceId, DeviceState> {
   ) as Record<DeviceId, DeviceState>
 }
 interface PowerState {
+  history: PowerSample[]
   devices: Record<DeviceId, DeviceState>
   strips: Record<StationId, boolean>
   selected: Selection
@@ -67,6 +70,26 @@ interface PowerState {
   toggleRotate: () => void
   tick: (seconds: number, now: number) => void
 }
+function powerSample(devices: Record<DeviceId, DeviceState>, time: number): PowerSample {
+  const readings = {} as Record<DeviceId, number>
+  const stations = Object.fromEntries(STATIONS.map((s) => [s.id, 0])) as Record<StationId, number>
+  let total = 0
+  for (const spec of DEVICE_CATALOG) {
+    const watts = devices[spec.id].watts
+    readings[spec.id] = watts
+    stations[spec.stationId] += watts
+    total += watts
+  }
+  return { time, devices: readings, stations, total }
+}
+
+function recordPower(history: PowerSample[], devices: Record<DeviceId, DeviceState>, now: number) {
+  // Keep event samples as well as one-second samples, including fast drags.
+  // A monotonic timestamp also handles a system-clock correction.
+  const lastTime = history.at(-1)?.time ?? 0
+  const time = Math.max(Number.isFinite(now) ? now : Date.now(), lastTime + 1)
+  return [...history, powerSample(devices, time)].slice(-90)
+}
 /** Update readouts in the same transaction as switches and sliders. */
 function withPower(
   state: PowerState,
@@ -86,10 +109,17 @@ function withPower(
       ]
     }),
   ) as Record<DeviceId, DeviceState>
-  return { ...changes, devices }
+  const changed = DEVICE_CATALOG.some((spec) => devices[spec.id].watts !== state.devices[spec.id].watts)
+  return {
+    ...changes,
+    devices,
+    history: changed ? recordPower(state.history, devices, Date.now()) : state.history,
+  }
 }
+const startingDevices = initialDevices()
 export const usePowerStore = create<PowerState>()((set) => ({
-  devices: initialDevices(),
+  devices: startingDevices,
+  history: [powerSample(startingDevices, Date.now())],
   strips: { s1: true, s2: true, s3: true, s4: true },
   selected: null,
   panelExpanded: false,
@@ -221,7 +251,7 @@ export const usePowerStore = create<PowerState>()((set) => ({
   toggleFlow: () => set((state) => ({ energyFlow: !state.energyFlow })),
   toggleLabels: () => set((state) => ({ labels: !state.labels })),
   toggleRotate: () => set((state) => ({ autoRotate: !state.autoRotate })),
-  tick: (seconds, _now) =>
+  tick: (seconds, now) =>
     set((state) => {
       const dt = Math.min(
         Math.max(Number.isFinite(seconds) ? seconds : 0, 0),
@@ -250,6 +280,7 @@ export const usePowerStore = create<PowerState>()((set) => ({
       return {
         devices,
         sessionSeconds: elapsed,
+        history: recordPower(state.history, devices, now),
       }
     }),
 }))

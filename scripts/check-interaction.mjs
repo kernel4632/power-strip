@@ -76,8 +76,39 @@ try {
   store.getState().setStrip('s2', false)
   store.getState().setStrip('s2', true)
   assert.equal(store.getState().strips.s2, true)
+  const { DEVICE_CATALOG } = await server.ssrLoadModule('/src/data/catalog.ts')
+  const { SCENE_MEASURED_TOTAL } = await server.ssrLoadModule('/src/data/sceneMeasured.ts')
+  const recorded = [...SCENE_MEASURED_TOTAL.series]
+  const before = store.getState().history.at(-1)
+  // No timer tick between changes: rapid drag and off/on must all reach the chart.
+  store.getState().setLevel('s1-laptop', 0.5)
+  const half = store.getState().history.at(-1)
+  assert.equal(half.devices['s1-laptop'], 115)
+  assert.equal(before.devices['s1-laptop'], 230, 'previous sample stays intact')
+  assert.equal(half.total, before.total - 115)
+  store.getState().setLevel('s1-laptop', 0.1)
+  store.getState().toggle('s1-laptop')
+  store.getState().toggle('s1-laptop')
+  assert.deepEqual(store.getState().history.slice(-4).map(s => s.devices['s1-laptop']), [115, 23, 0, 23])
+  store.getState().setStrip('s1', false)
+  assert.equal(store.getState().history.at(-1).stations.s1, 0)
+  store.getState().setMaster(false)
+  assert.equal(store.getState().history.at(-1).total, 0)
+  store.getState().setStrip('s1', true)
+  store.getState().setMaster(true)
+  store.getState().setLevel('s1-laptop', 1)
+  for (let i = 0; i < 120; i++) store.getState().tick(1, Date.now() + i * 1000)
+  const history = store.getState().history
+  assert.equal(history.length, 90, 'sample buffer is bounded')
+  assert.ok(history.every((s, i) => i === 0 || s.time > history[i - 1].time))
+  for (const sample of history) {
+    assert.equal(sample.total, Object.values(sample.devices).reduce((sum, watts) => sum + watts, 0))
+    for (const station of ['s1', 's2', 's3', 's4'])
+      assert.equal(sample.stations[station], DEVICE_CATALOG.filter(d => d.stationId === station).reduce((sum, d) => sum + sample.devices[d.id], 0))
+  }
+  assert.deepEqual(SCENE_MEASURED_TOTAL.series, recorded, 'controls do not rewrite 24-hour records')
   console.log(
-    'Interaction checks passed: hotspot collision/edges at 3 sizes and 3 anchor positions, shared power precision, panel and power state.',
+    'Interaction checks passed: hotspot collision/edges, shared precision, panel state, immediate slider/switch chart samples, aggregate curves, bounded history and unchanged daily records.',
   )
 } finally {
   await server.close()
