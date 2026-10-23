@@ -798,7 +798,11 @@ export function Appliance({ id }: { id: DeviceId }) {
         {spec.kind === 'headphones' && <Headphones on={active} />}
       </group>
       {(hovered || selected) && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, 0.001, 0]}
+          userData={{ inspectionIgnore: true }}
+        >
           <ringGeometry
             args={[
               Math.max(...spec.footprint) / 2 + 0.012,

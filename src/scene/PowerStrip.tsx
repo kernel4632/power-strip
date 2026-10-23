@@ -11,6 +11,7 @@ import {
 import { usePowerStore } from '../store/usePowerStore'
 import type { DeviceId, StationId } from '../types'
 import { Box, Cylinder, Rod } from './Geometry'
+import { cablePort } from './deviceConnections'
 
 function routedCable(points: Vector3[]) {
   const path = new CurvePath<Vector3>()
@@ -38,9 +39,14 @@ function routedCable(points: Vector3[]) {
 
 function Cable({ id }: { id: DeviceId }) {
   const spec = DEVICE_MAP[id]
+  const port = cablePort(spec)
   const flow = usePowerStore((s) => s.energyFlow)
   const active = usePowerStore(
-    (s) => s.masterOn && s.strips[spec.stationId] && s.devices[id].on && s.devices[id].watts > 0,
+    (s) =>
+      s.masterOn &&
+      s.strips[spec.stationId] &&
+      s.devices[id].on &&
+      s.devices[id].watts > 0,
   )
   const dots = useRef<Group>(null)
   const point = useRef(new Vector3())
@@ -51,9 +57,7 @@ function Cable({ id }: { id: DeviceId }) {
       STRIP_LOCAL[1] + 0.05,
       STRIP_LOCAL[2] - 0.064,
     )
-    const end = new Vector3(...spec.localPosition).add(
-      new Vector3(...spec.cablePort),
-    )
+    const end = new Vector3(...spec.localPosition).add(new Vector3(...port))
     const lane = -0.473 - spec.socket * 0.009
     const points = [
       start,
@@ -88,7 +92,10 @@ function Cable({ id }: { id: DeviceId }) {
     })
   })
   return (
-    <group name={`cable-${id}`}>
+    <group
+      name={`cable-${id}`}
+      userData={{ cableEnd: curve.getPoint(1).toArray() }}
+    >
       <mesh>
         <tubeGeometry args={[curve, 48, 0.0032, 5, false]} />
         <meshStandardMaterial color="#5c6b61" roughness={0.8} />
@@ -115,9 +122,9 @@ function Cable({ id }: { id: DeviceId }) {
       <Box
         size={[0.025, 0.016, 0.022]}
         position={[
-          spec.localPosition[0] + spec.cablePort[0],
-          spec.localPosition[1] + spec.cablePort[1],
-          spec.localPosition[2] + spec.cablePort[2],
+          spec.localPosition[0] + port[0],
+          spec.localPosition[1] + port[1],
+          spec.localPosition[2] + port[2],
         ]}
         color="#5e7167"
         round={0.003}
@@ -149,8 +156,8 @@ function Strip({ id }: { id: StationId }) {
       {[-0.9, -0.63, -0.16, 0.16].map((x) => (
         <Box
           key={x}
-          size={[0.015, 0.012, 0.018]}
-          position={[x, 0.925, -0.493]}
+          size={[0.015, 0.014, 0.04]}
+          position={[x, 0.947, -0.494]}
           color="#c6c5b4"
           round={0.003}
         />
@@ -184,26 +191,28 @@ function Strip({ id }: { id: StationId }) {
                 color="#4c5d53"
               />
             ))}
-            {devices.some(d => d.socket === socket) && <group>
-            <Box
-              size={[0.068, 0.034, 0.07]}
-              position={[0, 0.019, -0.012]}
-              color="#a5b3a6"
-              round={0.007}
-            />
-            <Box
-              size={[0.047, 0.002, 0.044]}
-              position={[0, 0.037, -0.012]}
-              color="#b8c4b6"
-              round={0.001}
-            />
-            <Rod
-              from={[0, 0.021, -0.044]}
-              to={[0, 0.021, -0.064]}
-              radius={0.006}
-              color="#829886"
-            />
-            </group>}
+            {devices.some((d) => d.socket === socket) && (
+              <group>
+                <Box
+                  size={[0.068, 0.034, 0.07]}
+                  position={[0, 0.019, -0.012]}
+                  color="#a5b3a6"
+                  round={0.007}
+                />
+                <Box
+                  size={[0.047, 0.002, 0.044]}
+                  position={[0, 0.037, -0.012]}
+                  color="#b8c4b6"
+                  round={0.001}
+                />
+                <Rod
+                  from={[0, 0.021, -0.044]}
+                  to={[0, 0.021, -0.064]}
+                  radius={0.006}
+                  color="#829886"
+                />
+              </group>
+            )}
           </group>
         ))}
         <Box
