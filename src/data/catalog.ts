@@ -10,6 +10,7 @@ import type {
   StationSpec,
 } from '../types'
 import { MEASURED_MAP } from './measured'
+import { DEVICE_REFERENCE_MAP } from './references'
 import { DESK_STRIP } from './strips'
 
 export const VOLTAGE = 220
@@ -73,13 +74,21 @@ export function toWorld(station: StationSpec, local: Point3): Point3 {
     station.position[2] - local[0] * s + local[2] * c,
   ]
 }
-/** On-state power is the group's mean nonzero reading, equally allocated to its units.
- * Historical zero intervals remain unchanged; the computer clock never controls a switch.
+/** 100% load is the unit's nameplate figure from the device reference sheet
+ * (游戏笔记本 230 W, MacBook 35 W, 台灯 10 W …), so the room total is a sum of
+ * ratings and never a sum of unrelated peaks. Ratings may exceed the recorded
+ * coincident peak; the two describe different things on purpose.
+ * Historical records remain unchanged; the computer clock never controls a switch.
  */
 export function deviceReading(spec: DeviceSpec): { watts: number; source: PowerSource } {
-  const values = MEASURED_MAP[spec.measuredGroup].series.filter(watts => watts > 0)
-  const watts = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length / spec.measuredUnits : 0
-  return { watts, source: 'allocated' }
+  return { watts: spec.referenceWatts, source: 'nameplate' }
+}
+
+/** Leading number of a reference string such as "230 W" or "1060(130-1400)W". */
+function nameplateWatts(groupId: string): number {
+  const text = DEVICE_REFERENCE_MAP[groupId]?.referencePower ?? ''
+  const value = Number.parseFloat(text)
+  return Number.isFinite(value) && value > 0 ? value : 0
 }
 
 type Placement = {
@@ -105,7 +114,7 @@ export const DEVICE_CATALOG: DeviceSpec[] = STATIONS.flatMap(station =>
     const group = MEASURED_MAP[p.group]
     return {
       id: `${station.id}-${p.kind}` as DeviceId, stationId: station.id, kind: p.kind,
-      name: p.name, english: p.group.toUpperCase(), referenceWatts: group.peakW / group.units,
+      name: p.name, english: p.group.toUpperCase(), referenceWatts: nameplateWatts(group.id),
       measuredGroup: group.id, measuredUnits: group.units,
       color: station.color, localPosition: p.position, position: toWorld(station, p.position),
       scale: p.scale, socket, footprint: p.footprint, height: p.height, cablePort: p.port, defaultOn: true,

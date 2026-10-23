@@ -4,8 +4,8 @@ function readBreakpoint() {
   const token = getComputedStyle(document.documentElement)
     .getPropertyValue('--breakpoint-md')
     .trim()
-  // 首帧样式可能还没应用，回退到 Tailwind 默认 md 断点。
-  return token || '48rem'
+  // 场景与侧栏需要合计 1024px；更窄时用底部抽屉保留模型空间。
+  return token || '64rem'
 }
 
 function matchesMobile() {

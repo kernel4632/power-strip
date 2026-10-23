@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '@fontsource/ibm-plex-sans/latin-400.css';
+@import '@fontsource/ibm-plex-sans/latin-500.css';
+@import '@fontsource/ibm-plex-sans/latin-600.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -31,6 +34,12 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-glass-tint: var(--glass-tint);
+  --color-glass-edge: var(--glass-edge);
+  --color-glass-hover: var(--glass-hover);
+  --color-glass-selected: var(--glass-selected);
+  --color-rule: var(--rule);
+  --shadow-glass: var(--glass-shadow);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-xs: calc(var(--radius) - 6px);
   --radius-md: calc(var(--radius) - 2px);
@@ -41,101 +50,147 @@
 @theme {
   --spacing: 0.25rem;
   --ease-ui: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Two type steps taken from the reference: a 20px display line tightened by
+     0.4px, and a 13px body line set at 1.5. Pixel values stay at this project's
+     own density; only the ratio between the two lines is borrowed. */
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.5rem;
+  --text-title--letter-spacing: -0.02em;
+  --text-body: 0.8125rem;
+  --text-body--line-height: 1.5;
   --animate-disclosure-open: disclosure-open var(--motion-panel) var(--ease-ui);
-  --animate-disclosure-close: disclosure-close var(--motion-control) var(--ease-ui);
+  --animate-disclosure-close: disclosure-close var(--motion-control)
+    var(--ease-ui);
   @keyframes disclosure-open {
-    from { height: 0; opacity: 0; }
-    to { height: var(--radix-collapsible-content-height); opacity: 1; }
+    from {
+      height: 0;
+      opacity: 0;
+    }
+    to {
+      height: var(--radix-collapsible-content-height);
+      opacity: 1;
+    }
   }
   @keyframes disclosure-close {
-    from { height: var(--radix-collapsible-content-height); opacity: 1; }
-    to { height: 0; opacity: 0; }
+    from {
+      height: var(--radix-collapsible-content-height);
+      opacity: 1;
+    }
+    to {
+      height: 0;
+      opacity: 0;
+    }
   }
-  --font-sans:
-    'Inter', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-sans: 'IBM Plex Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 @theme static {
-  --breakpoint-md: 48rem;
+  --breakpoint-md: 64rem;
 }
 
-/* shadcn/ui neutral theme. All application UI colors are consumed through these tokens. */
+/* Achromatic ledger: the chrome holds no hue at all (stone ground, ink figures,
+   1px rules), the scene keeps its own colour, and the one chart hue is taken
+   from the room's painted steel and spent only on the live power line. */
 :root {
   --motion-fast: 140ms;
-  --motion-control: 220ms;
+  --motion-control: 200ms;
   --motion-panel: 280ms;
-  --focus-ring-width: calc(var(--spacing) * 0.75);
-  --indicator-border-width: calc(var(--spacing) * 0.375);
+  --focus-ring-width: 3px;
+  --indicator-border-width: 1.5px;
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.64 0.145 68);
-  --warning-foreground: oklch(0.985 0 0);
-  --overlay: oklch(0 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --glass-blur: 14px;
+  --glass-tint: #ffffffc4;
+  --glass-edge: #e2dfd7;
+  --glass-hover: #f0eee7;
+  --glass-selected: #eae7de;
+  --glass-shadow: none;
+  --background: #f4f3f1;
+  --foreground: #171512;
+  --card: #ffffff;
+  --card-foreground: #171512;
+  --popover: #ffffff;
+  --popover-foreground: #171512;
+  --primary: #171512;
+  --primary-foreground: #fbfaf7;
+  --secondary: #eae7de;
+  --secondary-foreground: #171512;
+  --muted: #ece9e1;
+  --muted-foreground: #6c6a62;
+  --accent: #eae7de;
+  --accent-foreground: #171512;
+  --destructive: #a8342b;
+  --destructive-foreground: #ffffff;
+  --warning: #7a5a12;
+  --warning-foreground: #ffffff;
+  --overlay: #171512;
+  --border: #e0dcd3;
+  --rule: #eae7de;
+  --input: #d8d4cb;
+  --ring: #171512;
+  --chart-1: #17594a;
+  --chart-2: #17594a;
+  --chart-3: #8b887d;
+  --chart-4: #17594a;
+  --chart-5: #a8342b;
+  --scene-day: #f4f3f1;
+  --scene-night: #121110;
 }
-
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --warning: oklch(0.78 0.145 72);
-  --warning-foreground: oklch(0.205 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --background: #121110;
+  --foreground: #f3f1ea;
+  --card: #1a1917;
+  --card-foreground: #f3f1ea;
+  --popover: #1a1917;
+  --popover-foreground: #f3f1ea;
+  --primary: #f3f1ea;
+  --primary-foreground: #14130f;
+  --secondary: #262420;
+  --secondary-foreground: #f3f1ea;
+  --muted: #221f1c;
+  --muted-foreground: #a5a29a;
+  --accent: #2a2823;
+  --accent-foreground: #f3f1ea;
+  --destructive: #e28274;
+  --destructive-foreground: #1a0f0d;
+  --warning: #d9b26a;
+  --warning-foreground: #1f1800;
+  --border: #2b2925;
+  --rule: #23211d;
+  --input: #34312c;
+  --ring: #f3f1ea;
+  --glass-tint: #1a1917e8;
+  --glass-edge: #2b2925;
+  --glass-hover: #262420;
+  --glass-selected: #2a2823;
+  --chart-1: #5fbb9f;
+  --chart-2: #5fbb9f;
+  --chart-3: #8f8c82;
+  --chart-4: #5fbb9f;
+  --chart-5: #e28274;
 }
-
-/* 3D 场景日夜背景。二维 UI、场景材质与 theme-color 共用这一处取值。 */
-:root {
-  --scene-day: #e9e5dc;
-  --scene-night: #263338;
+@supports not (backdrop-filter: blur(1px)) {
+  :root {
+    --glass-tint: var(--card);
+    --popover: var(--card);
+  }
 }
-
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass-tint: var(--card);
+    --popover: var(--card);
+    --glass-blur: 0px;
+  }
+}
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply m-0 bg-background font-sans text-foreground antialiased;
+  }
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
   }
   html,
   body,
@@ -146,7 +201,9 @@
     display: none !important;
   }
   @media (prefers-reduced-motion: reduce) {
-    *, ::before, ::after {
+    *,
+    ::before,
+    ::after {
       animation: none !important;
       transition: none !important;
       scroll-behavior: auto !important;

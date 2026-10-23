@@ -1,4 +1,4 @@
-"""Compatibility entry point. Both source workbooks are required."""
+"""Compatibility entry point. The three source workbooks are required."""
 import runpy
 from pathlib import Path
 

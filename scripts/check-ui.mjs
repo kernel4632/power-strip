@@ -51,6 +51,6 @@ if (failures.length) {
   process.exitCode = 1
 } else {
   console.log(
-    `UI policy passed: ${assemblies.length} assemblies, ${primitives.length} shadcn components; no native controls, inline visual styles, or literal color/spacing overrides.`,
+    `UI policy passed: ${assemblies.length} assemblies, ${primitives.length} UI primitives; no native controls, inline visual styles, or literal color/spacing overrides.`,
   )
 }

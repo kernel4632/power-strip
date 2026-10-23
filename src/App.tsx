@@ -1,24 +1,18 @@
 import { Component, Suspense, lazy, useEffect, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import {
-  Home,
   SunMoon,
-  ChartNoAxesCombined,
   Focus,
   Zap,
   Eye,
   Info,
-  ChevronDown,
   X,
+  ArrowUpRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { GlassSurface } from '@/components/ui/glass-surface'
+import { PowerMark } from '@/components/ui/power-mark'
+import { PowerNumber } from '@/components/ui/power-number'
 import { Toggle } from '@/components/ui/toggle'
 import {
   Tooltip,
@@ -31,17 +25,11 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from '@/components/ui/popover'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { cn } from '@/lib/utils'
-import { formatEnergy } from '@/lib/format'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
   CAMERA_VIEWS,
@@ -50,7 +38,6 @@ import {
   STATION_MAP,
 } from './data/catalog'
 import { usePowerStore } from './store/usePowerStore'
-import { PowerChart } from './ui/PowerChart'
 import { PowerPanel } from './ui/PowerPanel'
 import { Hotspots } from './ui/Hotspots'
 import type { CameraView } from './types'
@@ -72,7 +59,7 @@ class SceneBoundary extends Component<
   render() {
     return this.state.failed ? (
       <div className="grid h-full place-items-center p-4">
-        <Alert className="max-w-sm">
+        <Alert className="max-w-sm rounded-none">
           <Info />
           <AlertTitle>场景暂时无法加载</AlertTitle>
           <AlertDescription>
@@ -93,16 +80,10 @@ export default function App() {
   const isMobile = useIsMobile()
   const state = usePowerStore()
   const [menu, setMenu] = useState<'camera' | 'help' | null>(null)
-  const [expandedEnergy, setExpandedEnergy] = useState(false)
   const total = DEVICE_CATALOG.reduce(
     (sum, d) => sum + state.devices[d.id].watts,
     0,
   )
-  const energy = DEVICE_CATALOG.reduce(
-    (sum, d) => sum + state.devices[d.id].energyWh,
-    0,
-  )
-  const energyText = formatEnergy(energy)
   const active = state.activeStation ? STATION_MAP[state.activeStation] : null
   const panelOpen = state.selected !== null
   useEffect(() => {
@@ -152,132 +133,35 @@ export default function App() {
       <main className="relative isolate h-dvh overflow-hidden bg-background text-foreground">
         <div
           className={cn(
-            'absolute inset-0',
-            panelOpen && 'max-md:bottom-1/2 md:right-96',
+            'absolute inset-x-0 bottom-0 top-14 overflow-hidden',
+            panelOpen && 'md:right-88',
           )}
         >
           <SceneBoundary>
             <Suspense
               fallback={
                 <div className="grid h-full place-items-center p-4">
-                  <Card className="w-72">
-                    <CardHeader>
-                      <CardTitle>加载中</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <Skeleton className="h-32 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                    </CardContent>
-                  </Card>
+                  <Skeleton className="h-40 w-40 rounded-none" />
                 </div>
               }
             >
               <Scene />
             </Suspense>
           </SceneBoundary>
+          <Hotspots />
         </div>
-        <Hotspots />
-        <header
-          className={cn(
-            'pointer-events-none absolute inset-x-4 top-4 z-30 flex flex-wrap items-center justify-between gap-2 md:gap-4',
-            panelOpen && 'md:right-100',
-          )}
-        >
+        <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex h-14 items-center justify-between gap-3 px-4 md:px-6">
           <Button
-            variant="outline"
-            className="pointer-events-auto h-auto gap-3 py-2"
+            variant="ghost"
+            className="pointer-events-auto h-11 gap-2.5 px-0 text-foreground hover:bg-transparent"
             aria-label="返回四人寝全景"
             onClick={() => state.setView('overview')}
           >
-            <Home />
-            宿舍
+            <PowerMark className="size-3.5" />
+            <h1 className="text-sm font-semibold tracking-tight">宿舍用电</h1>
           </Button>
-          <div className="pointer-events-auto flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={state.toggleNight}
-                  aria-label={state.night ? '切换日间场景' : '切换夜间场景'}
-                >
-                  <SunMoon className={cn('transition-transform duration-(--motion-panel) ease-ui', state.night && 'rotate-180')} />
-                </Button>
-              </TooltipTrigger>              <TooltipContent>日夜切换 · L</TooltipContent>
-            </Tooltip>
-            <Button
-              variant="outline"
-              onClick={() =>
-                state.select(state.selected === 'room' ? null : 'room')
-              }
-              aria-label="全寝能源面板"
-              aria-expanded={state.selected === 'room'}
-            >
-              <ChartNoAxesCombined />
-              <span className="hidden sm:inline">能源概览</span>
-            </Button>
-          </div>
-        </header>
-        <Collapsible
-          open={expandedEnergy}
-          onOpenChange={setExpandedEnergy}
-          asChild
-        >
-          <Card
-            className={cn(
-              'absolute bottom-4 left-4 z-20 w-44 gap-3 bg-linear-to-br from-card to-secondary py-4 md:bottom-4 md:w-56',
-              panelOpen && 'hidden',
-            )}
-            aria-label="场景设备功率概览"
-          >
-            <CardHeader className="gap-2 px-4">
-              <CardTitle className="text-sm">场景设备功率</CardTitle>
-              <CardTitle className="text-3xl tabular-nums">
-                {total.toFixed(0)}{' '}
-                <span className="text-sm font-normal">
-                  W
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4">
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  aria-label={expandedEnergy ? '收起功率趋势' : '展开功率趋势'}
-                >
-                  {expandedEnergy ? '收起趋势' : '查看趋势'}
-                  <ChevronDown className={cn('transition-transform duration-(--motion-control) ease-ui', expandedEnergy && 'rotate-180')} />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="overflow-hidden data-[state=open]:animate-disclosure-open data-[state=closed]:animate-disclosure-close">
-                <div className="space-y-3 pt-3">
-                <PowerChart history={state.history} compact />
-                <CardDescription className="tabular-nums">
-                  本次 {energyText.value} {energyText.unit}
-                </CardDescription>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => state.select('room')}
-                >
-                  查看用电详情
-                </Button>
-                </div>
-              </CollapsibleContent>
-            </CardContent>
-          </Card>
-        </Collapsible>
-        <Card
-          className={cn(
-            'absolute right-4 top-20 z-30 gap-2 p-2 md:top-1/2 md:-translate-y-1/2',
-            panelOpen && 'md:right-100',
-          )}
-        >
           <nav
-            className="flex flex-row gap-2 md:flex-col"
+            className="pointer-events-auto flex items-center gap-0.5"
             aria-label="场景工具"
           >
             <Popover
@@ -285,46 +169,50 @@ export default function App() {
               onOpenChange={(open) => setMenu(open ? 'camera' : null)}
             >
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="镜头与模型检查">
+                <Button variant="tool" size="icon" aria-label="观察角度">
                   <Focus />
                 </Button>
               </PopoverTrigger>
               <PopoverContent
                 side={isMobile ? 'bottom' : 'left'}
-                align="end"
-                className="w-64"
+                align="start"
+                sideOffset={6}
+                className="w-60 border-0 bg-transparent p-0 shadow-none backdrop-blur-none"
                 aria-label="观察角度"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle>观察角度</CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="关闭镜头菜单"
-                    onClick={() => setMenu(null)}
-                  >
-                    <X />
-                  </Button>
-                </div>
-                <div className="mt-4 flex flex-col gap-2">
-                  {Object.entries(CAMERA_VIEWS).map(([id, view]) => (
+                <GlassSurface className="rounded-none p-4 shadow-lg">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">观察角度</p>
                     <Button
-                      key={id}
-                      variant={
-                        !active && state.cameraView === id
-                          ? 'secondary'
-                          : 'ghost'
-                      }
-                      className="justify-start"
-                      onClick={() => {
-                        state.setView(id as CameraView)
-                        setMenu(null)
-                      }}
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="关闭镜头菜单"
+                      onClick={() => setMenu(null)}
                     >
-                      {view.label}
+                      <X />
                     </Button>
-                  ))}
-                </div>
+                  </div>
+                  <div className="mt-2 flex flex-col divide-y divide-rule border-t border-rule">
+                    {Object.entries(CAMERA_VIEWS).map(([id, view]) => (
+                      <Button
+                        key={id}
+                        variant="ghost"
+                        className={cn(
+                          'h-11 justify-start rounded-none px-0 text-sm',
+                          !active && state.cameraView === id
+                            ? 'text-foreground'
+                            : 'text-muted-foreground',
+                        )}
+                        onClick={() => {
+                          state.setView(id as CameraView)
+                          setMenu(null)
+                        }}
+                      >
+                        {view.label}
+                      </Button>
+                    ))}
+                  </div>
+                </GlassSurface>
               </PopoverContent>
             </Popover>
             <Tooltip>
@@ -333,11 +221,12 @@ export default function App() {
                   pressed={state.energyFlow}
                   onPressedChange={state.toggleFlow}
                   aria-label="切换能流"
+                  variant="tool"
                 >
                   <Zap />
                 </Toggle>
               </TooltipTrigger>
-              <TooltipContent>四路能流 · F</TooltipContent>
+              <TooltipContent>能流 · F</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -345,6 +234,7 @@ export default function App() {
                   pressed={state.labels}
                   onPressedChange={state.toggleLabels}
                   aria-label="切换模型标记"
+                  variant="tool"
                 >
                   <Eye />
                 </Toggle>
@@ -356,58 +246,100 @@ export default function App() {
               onOpenChange={(open) => setMenu(open ? 'help' : null)}
             >
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="交互指南">
+                <Button variant="tool" size="icon" aria-label="交互指南">
                   <Info />
                 </Button>
               </PopoverTrigger>
               <PopoverContent
                 side={isMobile ? 'bottom' : 'left'}
-                align="end"
+                align="start"
+                sideOffset={6}
                 aria-label="交互指南"
-                className="w-72"
+                className="w-64 border-0 bg-transparent p-0 shadow-none backdrop-blur-none"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle>从一个床位开始</CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="关闭指南"
-                    onClick={() => setMenu(null)}
-                  >
-                    <X />
-                  </Button>
-                </div>
-                <div className="mt-4 space-y-4">
-                  <Separator />
-                  <div className="flex justify-between text-sm">
-                    <KbdGroup>
-                      <Kbd>1</Kbd>–<Kbd>4</Kbd>
-                    </KbdGroup>
-                    <span>切换床位</span>
+                <GlassSurface className="rounded-none p-4 shadow-lg">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">快捷键</p>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="关闭指南"
+                      onClick={() => setMenu(null)}
+                    >
+                      <X />
+                    </Button>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <KbdGroup>
-                      <Kbd>0</Kbd>
-                      <Kbd>Esc</Kbd>
-                    </KbdGroup>
-                    <span>回全景 / 关闭详情</span>
+                  <div className="mt-3 space-y-2.5">
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <KbdGroup>
+                        <Kbd>1</Kbd>–<Kbd>4</Kbd>
+                      </KbdGroup>
+                      <span>切换床位</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <KbdGroup>
+                        <Kbd>0</Kbd>
+                        <Kbd>Esc</Kbd>
+                      </KbdGroup>
+                      <span>回全景 / 关闭</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <KbdGroup>
+                        <Kbd>F</Kbd>
+                        <Kbd>L</Kbd>
+                      </KbdGroup>
+                      <span>能流 / 昼夜</span>
+                    </div>
+                    <Separator />
+                    <p className="text-xs text-muted-foreground">
+                      拖动旋转，滚轮缩放。
+                    </p>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <KbdGroup>
-                      <Kbd>F</Kbd>
-                      <Kbd>L</Kbd>
-                    </KbdGroup>
-                    <span>能流 / 昼夜</span>
-                  </div>
-                  <CardDescription>
-                    拖动旋转，滚轮缩放。
-                  </CardDescription>
-                </div>
+                </GlassSurface>
               </PopoverContent>
             </Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="tool"
+                  size="icon"
+                  onClick={state.toggleNight}
+                  aria-label={state.night ? '切换日间场景' : '切换夜间场景'}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <SunMoon
+                    className={cn(
+                      'transition-transform duration-(--motion-panel) ease-ui',
+                      state.night && 'rotate-180',
+                    )}
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>昼夜 · L</TooltipContent>
+            </Tooltip>
           </nav>
-        </Card>
-        <PowerPanel />
+        </header>
+        <Button
+          variant="ghost"
+          className={cn(
+            'absolute bottom-4 left-4 z-20 h-auto w-56 flex-col items-stretch gap-0 rounded-lg border border-rule bg-card p-4 text-left text-card-foreground hover:bg-card md:bottom-6 md:left-6',
+            panelOpen && 'hidden',
+          )}
+          onClick={() => state.select('room')}
+          aria-label="打开全寝用电"
+        >
+          <span className="flex items-center justify-between gap-2 text-body text-muted-foreground">
+            全寝功率
+            <ArrowUpRight className="size-3.5" />
+          </span>
+          <span className="mt-1 flex items-baseline gap-1.5 font-sans text-5xl font-medium tracking-tight tabular-nums">
+            <PowerNumber value={total} />
+            <span className="text-sm tracking-normal text-muted-foreground">
+              W
+            </span>
+          </span>
+        </Button>
+        <PowerPanel key={state.selected ?? 'closed'} />
       </main>
     </TooltipProvider>
   )

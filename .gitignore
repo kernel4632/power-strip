@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 .playwright-mcp
+.shots/
+.taste-skill/
+.impeccable/
+.qa-preview.html
 
 # Editor directories and files
 .vscode/*

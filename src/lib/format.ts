@@ -1,4 +1,10 @@
 /** 小电量用 Wh 更易读，超过 100 Wh 再换算成 kWh。 */
+export function formatPower(watts: number) {
+  return new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 1 }).format(
+    watts,
+  )
+}
+
 export function formatEnergy(wattHours: number) {
   if (wattHours < 100)
     return { value: wattHours.toFixed(wattHours < 10 ? 2 : 1), unit: 'Wh' }

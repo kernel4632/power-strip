@@ -1,26 +1,28 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { Sparkline } from '@/components/ui/sparkline'
-import { MEASURED_GROUPS, MEASURED_MAP, MEASURED_TIMES, MEASURED_TOTAL } from '../data/measured'
+import { MEASURED_MAP, MEASURED_TIMES } from '../data/measured'
+import {
+  SCENE_MEASURED_GROUPS,
+  SCENE_MEASURED_TOTAL,
+} from '../data/sceneMeasured'
 import type { DeviceSpec } from '../types'
+import { formatPower } from '@/lib/format'
 
-const BY_AVERAGE = [MEASURED_TOTAL, ...[...MEASURED_GROUPS].sort((a, b) => b.avgW - a.avgW)]
+const BY_AVERAGE = [
+  SCENE_MEASURED_TOTAL,
+  ...[...SCENE_MEASURED_GROUPS].sort((a, b) => b.avgW - a.avgW),
+]
 
 /**
- * 原表 24 小时负荷。曲线是那一天的记录，不随开关变化；
+ * 场景已建模设备的 24 小时负荷。曲线是那一天的记录，不随开关变化；
  * 该历史记录不参与当前场景的电源开关控制。
  */
 export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
   const [active, setActive] = useState<string>(BY_AVERAGE[0]?.id ?? '')
-  const group = device ? MEASURED_MAP[device.measuredGroup] : BY_AVERAGE.find((item) => item.id === active) ?? MEASURED_TOTAL
+  const group = device
+    ? MEASURED_MAP[device.measuredGroup]
+    : (BY_AVERAGE.find((item) => item.id === active) ?? SCENE_MEASURED_TOTAL)
   const divisor = device?.measuredUnits ?? 1
   if (!group) return null
   const data = group.series.map((value, i) => ({
@@ -29,48 +31,58 @@ export function MeasuredLoad({ device }: { device?: DeviceSpec }) {
   }))
   const energy = (group.energyWh / divisor / 1000).toFixed(4)
   return (
-    <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
-      <CardHeader className="gap-2 px-2">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle>24 小时记录</CardTitle>
+    <div className="space-y-5">
+      {!device && (
+        <p className="text-body font-medium">{group.name}</p>
+      )}
+      <Sparkline data={data} unit="W" label="24 小时功率记录" />
+      <div className="grid grid-cols-3 gap-3 border-y border-rule py-3">
+        <div className="space-y-1">
+          <p className="text-body text-muted-foreground">平均</p>
+          <p className="font-sans text-body tabular-nums">
+            {formatPower(group.avgW / divisor)}
+            <span className="ml-1 text-xs text-muted-foreground">W</span>
+          </p>
         </div>
-        <CardDescription>{device ? `${device.name} · ${group.units} 台均分` : group.name}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 px-2">
-        <Sparkline data={data} unit="W" label="24 小时功率记录" />
-        <div className="grid grid-cols-3 gap-2">
-          <div className="space-y-1">
-            <CardDescription>平均</CardDescription>
-            <div className="text-sm tabular-nums">{(group.avgW / divisor).toFixed(2)} W</div>
-          </div>
-          <div className="space-y-1">
-            <CardDescription>峰值</CardDescription>
-            <div className="text-sm tabular-nums">{group.peakW / divisor} W</div>
-          </div>
-          <div className="space-y-1">
-            <CardDescription>日耗电</CardDescription>
-            <div className="text-sm tabular-nums">
-              {energy} kWh
-            </div>
-          </div>
+        <div className="space-y-1">
+          <p className="text-body text-muted-foreground">峰值</p>
+          <p className="font-sans text-body tabular-nums">
+            {formatPower(group.peakW / divisor)}
+            <span className="ml-1 text-xs text-muted-foreground">W</span>
+          </p>
         </div>
-        {!device && <Separator />}
-        {!device && <div className="space-y-1">
+        <div className="space-y-1">
+          <p className="text-body text-muted-foreground">日耗电</p>
+          <p className="font-sans text-body tabular-nums">
+            {energy}
+            <span className="ml-1 text-xs text-muted-foreground">kWh</span>
+          </p>
+        </div>
+      </div>
+      {!device && (
+        <div className="divide-y divide-rule border-t border-rule">
           {BY_AVERAGE.map((item) => (
             <Button
               key={item.id}
-              variant={active === item.id ? 'secondary' : 'ghost'}
-              className="h-auto w-full justify-between gap-2 py-2"
+              variant="ghost"
+              className="h-11 w-full justify-between gap-3 rounded-none px-0 text-body font-normal hover:bg-transparent"
+              aria-pressed={active === item.id}
               onClick={() => setActive(item.id)}
             >
-              <span className="truncate">{item.name}</span>
-              <span className="shrink-0 text-xs tabular-nums">
-                {item.avgW.toFixed(1)} W
+              <span
+                className={
+                  active === item.id ? 'truncate' : 'truncate text-muted-foreground'
+                }
+              >
+                {item.name}
+              </span>
+              <span className="shrink-0 font-sans text-xs tabular-nums text-muted-foreground">
+                {formatPower(item.avgW)} W
               </span>
             </Button>
           ))}
-        </div>}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   )
 }

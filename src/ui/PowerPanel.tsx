@@ -1,30 +1,31 @@
-import { Focus, Zap, Layers, ArrowRight, ArrowLeft, X, Info } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { useState } from 'react'
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+  Focus,
+  Zap,
+  Layers,
+  ArrowLeft,
+  X,
+  Expand,
+  Shrink,
+  ArrowUpRight,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
   SheetDescription,
   SheetClose,
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
+import { PowerNumber } from '@/components/ui/power-number'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Alert, AlertTitle } from '@/components/ui/alert'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
-import { formatEnergy, loadLevel } from '@/lib/format'
+import { formatEnergy, formatPower } from '@/lib/format'
 import {
   DEVICE_CATALOG,
   DEVICE_MAP,
@@ -36,14 +37,11 @@ import {
 import { usePowerStore } from '../store/usePowerStore'
 import type { DeviceId, StationId } from '../types'
 import { MeasuredLoad } from './MeasuredLoad'
-import { PowerChart } from './PowerChart'
-import { StripSpecs } from './StripSpecs'
-import { DESK_STRIP } from '../data/strips'
 
 export function PowerPanel() {
   const state = usePowerStore()
   const isMobile = useIsMobile()
-  const open = state.selected !== null
+  const [view, setView] = useState<'control' | 'record'>('control')
   const spec = state.selected?.includes('-')
     ? DEVICE_MAP[state.selected as DeviceId]
     : null
@@ -53,14 +51,16 @@ export function PowerPanel() {
       ? STATION_MAP[state.selected as StationId]
       : null
   const devices = station ? stationDevices(station.id) : DEVICE_CATALOG
+  const hasRecords = !station || !!spec
   const device = spec ? state.devices[spec.id] : null
   const watts = device
     ? device.watts
-    : devices.reduce((sum, d) => sum + state.devices[d.id].watts, 0)
-  const energy = device
-    ? device.energyWh
-    : devices.reduce((sum, d) => sum + state.devices[d.id].energyWh, 0)
-  const limit = spec?.referenceWatts ?? station?.limit ?? 0
+    : devices.reduce((n, d) => n + state.devices[d.id].watts, 0)
+  const energy = formatEnergy(
+    device
+      ? device.energyWh
+      : devices.reduce((n, d) => n + state.devices[d.id].energyWh, 0),
+  )
   const active =
     state.masterOn &&
     (station ? state.strips[station.id] : true) &&
@@ -70,313 +70,306 @@ export function PowerPanel() {
     : station
       ? `${station.name}插排电源`
       : '全寝总电源'
-  const levelLabel =
-    spec?.kind === 'lamp'
-      ? '灯光亮度'
-      : spec?.kind === 'fan'
-        ? '风扇转速'
-        : '负载'
-  const level = loadLevel(watts, limit)
-  const energyText = formatEnergy(energy)
+  const levelLabel = spec?.kind === 'lamp' ? '灯光亮度' : '负载'
+  const unavailable = !state.masterOn
+    ? '全寝总电源已关闭'
+    : station && !state.strips[station.id]
+      ? '本床位插排已关闭'
+      : null
+  const title = spec?.name ?? (station ? `${station.name}插排` : '全寝用电')
+  const meta = spec
+    ? station?.name
+    : station
+      ? `${devices.length} 件设备`
+      : `${STATIONS.length} 个床位`
+  const deviceRows = (
+    <div className="divide-y divide-rule border-t border-rule">
+      {devices.map((d) => (
+        <Button
+          key={d.id}
+          variant="ghost"
+          className="group/row h-12 w-full justify-between gap-3 rounded-none px-0 text-body font-normal hover:bg-muted/50"
+          onClick={() => state.select(d.id)}
+        >
+          <span className="truncate">{d.name}</span>
+          <span className="flex shrink-0 items-baseline gap-1.5 font-sans text-xs tabular-nums text-muted-foreground">
+            {formatPower(state.devices[d.id].watts)}
+            <span className="text-xs">W</span>
+            <ArrowUpRight className="size-3 opacity-40 transition-[opacity,translate] duration-(--motion-fast) group-hover/row:opacity-100 group-focus-visible/row:opacity-100 motion-safe:group-hover/row:-translate-y-0.5 motion-safe:group-hover/row:translate-x-0.5" />
+          </span>
+        </Button>
+      ))}
+    </div>
+  )
   return (
     <Sheet
-      open={open}
+      open={state.selected !== null}
+      modal={false}
       onOpenChange={(value) => {
         if (!value) state.closePanel()
       }}
-      modal={false}
     >
       <SheetContent
         side={isMobile ? 'bottom' : 'right'}
         showCloseButton={false}
         className={cn(
-          'gap-0',
+          'gap-0 overflow-hidden rounded-none border-border bg-card',
           isMobile
-            ? 'h-1/2 rounded-t-2xl'
-            : 'w-96 sm:max-w-96',
+            ? state.panelExpanded
+              ? 'h-3/4'
+              : 'h-1/2'
+            : 'bottom-0 right-0 top-14 h-auto w-88 border-l sm:max-w-88',
         )}
         onInteractOutside={(event) => event.preventDefault()}
         aria-label="床位与设备详情"
       >
-        <SheetHeader className="shrink-0 pr-16">
-          <SheetTitle>
-            {spec?.name ??
-              (station ? `${station.name} · 独立插排` : '能源概览')}
-          </SheetTitle>
-          <SheetDescription className="sr-only">功率与电源控制</SheetDescription>
-        </SheetHeader>
-        <SheetClose asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-4 top-4 size-10"
-            aria-label="关闭详情面板"
-          >
-            <X />
-          </Button>
-        </SheetClose>
-        <Separator />
-        <ScrollArea key={state.selected} className="min-h-0 flex-1">
-          <div className="space-y-6 p-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-(--motion-control) motion-safe:ease-ui motion-safe:md:slide-in-from-bottom-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={level === 'over' ? 'destructive' : 'secondary'}>
-                {!state.masterOn
-                  ? '全寝总电源已关'
-                  : station && !state.strips[station.id]
-                    ? '本床位已断电'
-                    : device && !device.on
-                      ? '设备已断电'
-                      : '正在供电'}
-              </Badge>
-              {spec && (
-                <Badge variant="secondary">
-                  {station?.name} · 插孔 {spec.socket + 1}
-                </Badge>
-              )}
-              {device && (
-                <Badge variant="outline">运行均值 · 均分</Badge>
-              )}
-            </div>
-            {spec && (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={state.focus}
-              >
-                <Focus />
-                查看设备
-              </Button>
-            )}
-            <Card className="bg-linear-to-br from-card to-secondary shadow-none">
-              <CardHeader>
-                <CardTitle className="text-sm">
-                  {spec
-                    ? '当前设备功率'
-                    : station
-                      ? '本床位总功率'
-                      : '场景设备总功率'}
-                </CardTitle>
-                <CardTitle className="text-4xl tabular-nums">
-                  {watts.toFixed(1)}{' '}
-                  <span className="text-sm font-normal">
-                    W
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {limit > 0 && <Progress
-                  value={Math.min(100, (watts / limit) * 100)}
-                  aria-label={spec ? '相对记录峰值' : '插排最大功率占比'}
-                  className={cn(
-                    '[&_[data-slot=progress-indicator]]:bg-chart-2',
-                    level === 'near' &&
-                      '[&_[data-slot=progress-indicator]]:bg-warning',
-                    level === 'over' &&
-                      '[&_[data-slot=progress-indicator]]:bg-destructive',
-                  )}
-                />}
-              </CardContent>
-            </Card>
-            <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
-              <CardContent className="space-y-4 px-2">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="power-switch">
-                      {spec
-                        ? '设备电源'
-                        : station
-                          ? '此床位插排总开关'
-                          : '全寝总电源'}
-                    </Label>
-                  </div>
-                  <Switch
-                    id="power-switch"
-                    aria-label={powerLabel}
-                    checked={active}
-                    disabled={
-                      (!!spec &&
-                        (!state.masterOn || !state.strips[spec.stationId])) ||
-                      (!!station && !state.masterOn)
-                    }
-                    onCheckedChange={(checked) =>
-                      spec
-                        ? state.toggle(spec.id)
-                        : station
-                          ? state.setStrip(station.id, checked)
-                          : state.setMaster(checked)
-                    }
-                  />
-                </div>
-                {spec && device && (
-                  <>
-                    <Separator />
-                    <div className="flex items-center justify-between gap-4">
-                      <Label id="device-level-label">{levelLabel}</Label>
-                      <Badge variant="secondary">
-                        {Math.round(device.level * 100)}%
-                      </Badge>
-                    </div>
-                    <Slider
-                      aria-labelledby="device-level-label"
-                      min={10}
-                      max={100}
-                      step={5}
-                      value={[Math.round(device.level * 100)]}
-                      onValueChange={([value]) =>
-                        state.setLevel(spec.id, value / 100)
-                      }
-                      disabled={!active}
-                    />
-                  </>
+        <Tabs
+          value={view}
+          onValueChange={(value) => {
+            setView(value as 'control' | 'record')
+            if (isMobile) state.setPanelExpanded(value === 'record')
+          }}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <header className="shrink-0 border-b border-rule px-4 pb-3 pt-1">
+            <div className="flex h-11 items-center justify-between">
+              <div className="-ml-2.5 flex items-center">
+                {spec && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="返回本床位插排"
+                    title="返回本床位插排"
+                    onClick={() => state.select(spec.stationId)}
+                  >
+                    <ArrowLeft />
+                  </Button>
                 )}
-              </CardContent>
-            </Card>
-            <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
-              <CardHeader className="px-2">
-                <CardTitle>功率轨迹</CardTitle>
-              </CardHeader>
-              <CardContent className="px-2">
-                <PowerChart
-                  history={state.history}
-                  device={spec?.id}
-                  station={station?.id}
-                />
-              </CardContent>
-            </Card>
-            {(spec || !station) && <MeasuredLoad key={spec?.id ?? 'all'} device={spec ?? undefined} />}
-            <Separator />
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
-                <CardHeader className="px-2">
-                  <CardTitle className="text-sm">本次用电</CardTitle>
-                  <CardTitle className="text-lg tabular-nums">
-                    {energyText.value} {energyText.unit}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
-                <CardHeader className="px-2">
-                  <CardTitle className="text-sm">电流</CardTitle>
-                  <CardTitle className="text-lg tabular-nums">
-                    {(watts / VOLTAGE).toFixed(2)} A
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-            </div>
-            {!spec && station && (
-              <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
-                <CardHeader className="px-2">
-                  <CardTitle>四位插排</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 px-0">
-                  {devices.map((d) => (
-                    <Button
-                      key={d.id}
-                      variant="ghost"
-                      className="h-auto w-full justify-between gap-2 py-3"
-                      onClick={() => state.select(d.id)}
-                    >
-                      <span className="flex items-center gap-2">
-                        <Badge variant="secondary">{d.socket + 1}</Badge>
-                        {d.name}
-                      </span>
-                      <span className="text-xs tabular-nums">
-                        {state.devices[d.id].watts.toFixed(1)} W
-                      </span>
-                    </Button>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-            {!station && (
-              <Card className="gap-3 rounded-none border-0 bg-transparent py-0 shadow-none">
-                <CardHeader className="px-2">
-                  <CardTitle>四个独立床位</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 px-0">
-                  {STATIONS.map((s) => (
-                    <Button
-                      key={s.id}
-                      variant="ghost"
-                      className="h-auto w-full justify-between py-3"
-                      onClick={() => state.selectStation(s.id)}
-                    >
-                      <span>
-                        {s.number} · {s.name}
-                      </span>
-                      <span className="text-xs tabular-nums">
-                        {stationDevices(s.id)
-                          .reduce((n, d) => n + state.devices[d.id].watts, 0)
-                          .toFixed(1)}{' '}
-                        W
-                      </span>
-                    </Button>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-            {!spec && <StripSpecs current={station ? DESK_STRIP : undefined} />}
-            {spec && (
-              <>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={() => state.select(spec.stationId)}
-                >
-                  <ArrowLeft />
-                  返回本床位插排
-                </Button>
-              </>
-            )}
-            {station && !spec && (
-              <div className="grid gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => state.selectStation(station.id)}
-                >
-                  <Focus />
-                  查看完整床位
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    state.inspect('strip')
-                    state.closePanel()
-                  }}
-                >
-                  <Zap />
-                  近看插头与走线
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    state.inspect('bed')
-                    state.closePanel()
-                  }}
-                >
-                  <Layers />
-                  近看上铺与护栏
-                </Button>
               </div>
-            )}
-            {station && !spec && watts > limit && (
-              <Alert variant="destructive">
-                <Info />
-                <AlertTitle>负载偏高</AlertTitle>
-              </Alert>
-            )}
-            {station && (
-              <Button
-                variant="secondary"
-                className="w-full"
-                onClick={() => state.select('room')}
+              <div className="-mr-2.5 flex items-center">
+                {isMobile && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={
+                      state.panelExpanded ? '收起详情面板' : '展开详情面板'
+                    }
+                    onClick={() =>
+                      state.setPanelExpanded(!state.panelExpanded)
+                    }
+                  >
+                    {state.panelExpanded ? <Shrink /> : <Expand />}
+                  </Button>
+                )}
+                <SheetClose asChild>
+                  <Button variant="ghost" size="icon" aria-label="关闭详情面板">
+                    <X />
+                  </Button>
+                </SheetClose>
+              </div>
+            </div>
+            <div className="px-1 text-center">
+              <SheetTitle className="truncate text-title font-medium">
+                {title}
+              </SheetTitle>
+              <SheetDescription className="mt-0.5 truncate text-body text-muted-foreground">
+                {meta}
+              </SheetDescription>
+            </div>
+            {hasRecords && (
+              <TabsList
+                className="mt-3 justify-center"
+                aria-label="详情内容"
               >
-                查看全寝总用电
-                <ArrowRight />
-              </Button>
+                <TabsTrigger value="control">功率</TabsTrigger>
+                <TabsTrigger value="record">24小时记录</TabsTrigger>
+              </TabsList>
             )}
-          </div>
-        </ScrollArea>
+          </header>
+          <TabsContent
+            value={view}
+            aria-label={hasRecords ? undefined : '床位用电'}
+            asChild
+          >
+            <ScrollArea key={view} className="min-h-0 flex-1">
+              <div className="space-y-5 px-4 py-4">
+                {view === 'control' || !hasRecords ? (
+                  <>
+                    <div className="flex items-end justify-between gap-4">
+                      <p className="flex items-baseline gap-1.5 font-sans text-4xl font-medium tracking-tight tabular-nums">
+                        <PowerNumber value={watts} />
+                        <span className="text-sm tracking-normal text-muted-foreground">
+                          W
+                        </span>
+                      </p>
+                      <div className="flex flex-col items-center gap-1">
+                        <Switch
+                          id="power-switch"
+                          aria-label={powerLabel}
+                          checked={active}
+                          disabled={
+                            spec
+                              ? !!unavailable
+                              : !!station && !state.masterOn
+                          }
+                          onCheckedChange={(checked) =>
+                            spec
+                              ? state.toggle(spec.id)
+                              : station
+                                ? state.setStrip(station.id, checked)
+                                : state.setMaster(checked)
+                          }
+                        />
+                        <Label htmlFor="power-switch" className="sr-only">
+                          {active ? '电源开启' : '电源关闭'}
+                        </Label>
+                      </div>
+                    </div>
+                    {spec && device && (
+                      <div>
+                        <div className="flex items-baseline justify-between gap-3">
+                          <Label
+                            id="device-level-label"
+                            className="text-body"
+                          >
+                            {levelLabel}
+                          </Label>
+                          <span className="font-sans text-body tabular-nums text-muted-foreground">
+                            {Math.round(device.level * 100)}%
+                          </span>
+                        </div>
+                        <Slider
+                          aria-labelledby="device-level-label"
+                          min={10}
+                          max={100}
+                          step={5}
+                          value={[Math.round(device.level * 100)]}
+                          onValueChange={([value]) =>
+                            state.setLevel(spec.id, value / 100)
+                          }
+                          disabled={!active}
+                        />
+                      </div>
+                    )}
+                    {unavailable && (spec || station) && (
+                      <p className="text-body leading-relaxed text-muted-foreground">
+                        {unavailable}
+                      </p>
+                    )}
+                    {spec && (
+                      <Button
+                        variant="ghost"
+                        className="h-12 w-full justify-between rounded-none border-y border-rule px-0 text-body font-normal hover:bg-muted/50"
+                        onClick={state.focus}
+                      >
+                        近看设备
+                        <Focus />
+                      </Button>
+                    )}
+                    {!spec && station && (
+                      <section aria-label="此床位设备">{deviceRows}</section>
+                    )}
+                    {!station && (
+                      <section aria-label="四个床位">
+                        <div className="divide-y divide-rule border-t border-rule">
+                          {STATIONS.map((s) => (
+                            <Button
+                              key={s.id}
+                              variant="ghost"
+                              className="h-11 w-full justify-between gap-3 rounded-none px-0 text-body font-normal hover:bg-transparent"
+                              onClick={() => state.selectStation(s.id)}
+                            >
+                              <span>{s.name}</span>
+                              <span className="flex shrink-0 items-baseline gap-1.5 font-sans text-xs tabular-nums text-muted-foreground">
+                                {formatPower(
+                                  stationDevices(s.id).reduce(
+                                    (n, d) => n + state.devices[d.id].watts,
+                                    0,
+                                  ),
+                                )}
+                                <span className="text-xs">W</span>
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                    <div className="grid grid-cols-2 gap-4 border-t border-rule pt-4">
+                      <div>
+                        <p className="text-body text-muted-foreground">
+                          本次用电
+                        </p>
+                        <p className="mt-1 font-sans text-body tabular-nums">
+                          {energy.value} {energy.unit}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-body text-muted-foreground">电流</p>
+                        <p className="mt-1 font-sans text-body tabular-nums">
+                          {(watts / VOLTAGE).toFixed(2)} A
+                        </p>
+                      </div>
+                    </div>
+                    {station && !spec && (
+                      <div className="flex flex-col divide-y divide-rule border-t border-rule">
+                        <Button
+                          variant="ghost"
+                          className="h-11 justify-between rounded-none px-0 text-body font-normal hover:bg-transparent"
+                          onClick={() => state.selectStation(station.id)}
+                        >
+                          完整床位
+                          <Focus />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="h-11 justify-between rounded-none px-0 text-body font-normal hover:bg-transparent"
+                          onClick={() => {
+                            state.inspect('strip')
+                            state.closePanel()
+                          }}
+                        >
+                          插头与走线
+                          <Zap />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="h-11 justify-between rounded-none px-0 text-body font-normal hover:bg-transparent"
+                          onClick={() => {
+                            state.inspect('bed')
+                            state.closePanel()
+                          }}
+                        >
+                          上铺与护栏
+                          <Layers />
+                        </Button>
+                        {watts > station.limit && (
+                          <p
+                            role="alert"
+                            className="py-3 text-body text-destructive"
+                          >
+                            负载超过插排参考上限。
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <MeasuredLoad device={spec ?? undefined} />
+                )}
+                {station && (
+                  <Button
+                    variant="ghost"
+                    className="h-11 w-full justify-between rounded-none border-t border-rule px-0 text-body font-normal text-muted-foreground hover:bg-transparent"
+                    onClick={() => state.select('room')}
+                  >
+                    全寝
+                    <ArrowUpRight />
+                  </Button>
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   )

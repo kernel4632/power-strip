@@ -30,7 +30,7 @@ function Slider({
       min={min}
       max={max}
       className={cn(
-        "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
+        "relative flex min-h-11 w-full touch-none items-center select-none data-[disabled]:opacity-40 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
         className
       )}
       {...props}
@@ -38,7 +38,7 @@ function Slider({
       <SliderPrimitive.Track
         data-slot="slider-track"
         className={cn(
-          "relative grow overflow-hidden rounded-full bg-muted data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
+          "relative grow overflow-hidden rounded-full bg-input data-[orientation=horizontal]:h-1 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1"
         )}
       >
         <SliderPrimitive.Range
@@ -53,8 +53,9 @@ function Slider({
           data-slot="slider-thumb"
           aria-label={props["aria-label"]}
           aria-labelledby={props["aria-labelledby"]}
+          aria-valuetext={props["aria-valuetext"]}
           key={index}
-          className="block size-4 shrink-0 rounded-full border border-primary bg-background shadow-sm ring-ring/50 transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
+          className="relative block size-4 shrink-0 cursor-grab rounded-full border border-primary bg-card shadow-sm ring-ring/15 after:absolute after:-inset-3.5 after:rounded-full after:content-[''] transition-[box-shadow,scale] duration-(--motion-fast) ease-ui hover:ring-4 active:cursor-grabbing motion-safe:active:scale-110 focus-visible:ring-(length:--focus-ring-width) focus-visible:ring-ring/50 focus-visible:outline-hidden data-[disabled]:pointer-events-none"
         />
       ))}
     </SliderPrimitive.Root>

@@ -30,6 +30,7 @@ import type { Point3 } from '../types'
 import { Appliance } from './Appliance'
 import { DormRoom } from './DormRoom'
 import { PowerStrip } from './PowerStrip'
+import { placeHotspots, type HotspotBox } from '@/lib/hotspot-layout'
 
 function CameraRig() {
   const controls = useRef<OrbitControlsImpl>(null),
@@ -97,7 +98,7 @@ function CameraRig() {
     if (!state.activeStation && size.width < 700)
       goal.current.position
         .sub(goal.current.target)
-        .multiplyScalar(Math.max(1.1, 0.9 / (size.width / size.height)))
+        .multiplyScalar(Math.max(1.2, 0.69 / (size.width / size.height)))
         .add(goal.current.target)
     goal.current.moving = true
     if (
@@ -157,19 +158,48 @@ function Projection() {
   ])
   const point = useRef(new Vector3())
   useFrame(({ camera, size }) => {
+    const projected: HotspotBox[] = []
     anchors.current.forEach((a) => {
       if (!a.element?.isConnected)
         a.element = document.getElementById(`anchor-${a.id}`)
       if (!a.element) return
       point.current.copy(a.point).project(camera)
-      a.element.style.visibility =
+      const visible =
         point.current.z > -1 &&
         point.current.z < 1 &&
         Math.abs(point.current.x) < 1.1 &&
         Math.abs(point.current.y) < 1.1
-          ? 'visible'
-          : 'hidden'
-      a.element.style.transform = `translate(${((point.current.x + 1) * size.width) / 2}px,${((1 - point.current.y) * size.height) / 2}px) translate(-50%,-50%)`
+      const button = a.element.firstElementChild as HTMLElement | null
+      if (visible && button && !button.hidden)
+        projected.push({
+          id: a.id,
+          x: ((point.current.x + 1) * size.width) / 2,
+          y: ((1 - point.current.y) * size.height) / 2,
+          width: button.offsetWidth,
+          height: button.offsetHeight,
+        })
+    })
+    const state = usePowerStore.getState()
+    const selected = state.selected?.includes('-')
+      ? state.selected
+      : `strip-${state.selected}`
+    const placed = placeHotspots(projected, size.width, size.height, selected)
+    anchors.current.forEach((a) => {
+      const box = placed.find((item) => item.id === a.id)
+      const line = document.getElementById(`line-${a.id}`)
+      if (a.element) a.element.style.visibility = box ? 'visible' : 'hidden'
+      if (line) line.style.visibility = box ? 'visible' : 'hidden'
+      if (!box || !a.element) return
+      a.element.style.transform = `translate(${box.x}px,${box.y}px)`
+      const origin = projected.find((item) => item.id === a.id)!
+      const segment = line?.querySelector('line'),
+        dot = line?.querySelector('circle')
+      segment?.setAttribute('x1', String(origin.x))
+      segment?.setAttribute('y1', String(origin.y))
+      segment?.setAttribute('x2', String(box.x + box.width / 2))
+      segment?.setAttribute('y2', String(box.y + box.height / 2))
+      dot?.setAttribute('cx', String(origin.x))
+      dot?.setAttribute('cy', String(origin.y))
     })
   })
   return null
@@ -181,6 +211,13 @@ function RenderBudget() {
     gl.shadowMap.autoUpdate = false
     gl.shadowMap.needsUpdate = true
     const unsubscribe = usePowerStore.subscribe((next, prev) => {
+      if (
+        next.selected !== prev.selected ||
+        next.labels !== prev.labels ||
+        next.panelExpanded !== prev.panelExpanded
+      ) {
+        requestAnimationFrame(() => get().invalidate())
+      }
       if (
         next.night !== prev.night ||
         next.activeStation !== prev.activeStation ||
