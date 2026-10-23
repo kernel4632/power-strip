@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { powerStep } from '../lib/power-step'
 import {
   DEVICE_CATALOG,
   DEVICE_MAP,
@@ -43,6 +44,8 @@ interface PowerState {
   activeStation: StationId | null
   cutaway: boolean
   sessionSeconds: number
+  lastTickMs: number | null
+  sync: (monotonicMs?: number) => void
   masterOn: boolean
   mode: SceneMode
   night: boolean
@@ -96,11 +99,36 @@ function recordPower(history: PowerSample[], devices: Record<DeviceId, DeviceSta
 function powerWave(elapsed: number, index: number) {
   return 0.97 + 0.03 * Math.sin(elapsed * 0.7 + index * 2)
 }
+function advancePower(state: PowerState, seconds: number): Partial<PowerState> {
+  const dt = Math.max(Number.isFinite(seconds) ? seconds : 0, 0)
+  if (dt === 0) return {}
+  const devices = { ...state.devices }
+  DEVICE_CATALOG.forEach((spec, index) => {
+    const device = state.devices[spec.id]
+    const powered = state.masterOn && state.strips[spec.stationId] && device.on
+    const step = powered
+      ? powerStep(device.watts, deviceReading(spec).watts * device.level, state.sessionSeconds, dt, index)
+      : { watts: 0, energyWh: 0 }
+    devices[spec.id] = { ...device, watts: step.watts, energyWh: device.energyWh + step.energyWh }
+  })
+  return { devices, sessionSeconds: state.sessionSeconds + dt }
+}
+function settle(state: PowerState, monotonicMs: number): Partial<PowerState> {
+  if (!Number.isFinite(monotonicMs)) return {}
+  const now = Math.max(monotonicMs, state.lastTickMs ?? monotonicMs)
+  return {
+    ...advancePower(state, state.lastTickMs === null ? 0 : (now - state.lastTickMs) / 1000),
+    lastTickMs: now,
+  }
+}
 /** Update readouts in the same transaction as switches and sliders. */
 function withPower(
   state: PowerState,
   changes: Partial<PowerState>,
 ): Partial<PowerState> {
+  // Settle the old settings up to the exact control event, before applying changes.
+  const settled = state.lastTickMs === null ? {} : settle(state, performance.now())
+  state = { ...state, ...settled }
   const next = { ...state, ...changes }
   const devices = Object.fromEntries(
     DEVICE_CATALOG.map((spec, index) => {
@@ -116,12 +144,14 @@ function withPower(
         {
           ...device,
           watts,
+          energyWh: previous.energyWh,
         },
       ]
     }),
   ) as Record<DeviceId, DeviceState>
   const changed = DEVICE_CATALOG.some((spec) => devices[spec.id].watts !== state.devices[spec.id].watts)
   return {
+    ...settled,
     ...changes,
     devices,
     history: changed ? recordPower(state.history, devices, Date.now()) : state.history,
@@ -138,6 +168,11 @@ export const usePowerStore = create<PowerState>()((set) => ({
   activeStation: null,
   cutaway: true,
   sessionSeconds: 0,
+  lastTickMs: null,
+  sync: (monotonicMs = performance.now()) => set((state) => {
+    const next = { ...state, ...settle(state, monotonicMs) }
+    return { ...next, history: recordPower(state.history, next.devices, Date.now()) }
+  }),
   masterOn: true,
   mode: 'study',
   night: false,
@@ -264,36 +299,10 @@ export const usePowerStore = create<PowerState>()((set) => ({
   toggleRotate: () => set((state) => ({ autoRotate: !state.autoRotate })),
   tick: (seconds, now) =>
     set((state) => {
-      const dt = Math.min(
-        Math.max(Number.isFinite(seconds) ? seconds : 0, 0),
-        5,
-      )
-      const elapsed = state.sessionSeconds + dt
-      const devices = { ...state.devices }
-      DEVICE_CATALOG.forEach((spec, index) => {
-        const device = state.devices[spec.id]
-        const powered = state.masterOn && state.strips[spec.stationId]
-        const reading = deviceReading(spec)
-        const target = !powered
-          ? 0
-          : device.on
-            ? reading.watts * device.level * powerWave(elapsed, index)
-            : 0
-        const watts = !powered || !device.on
-          ? 0
-          : device.watts + (target - device.watts) * (1 - Math.exp(-dt * 2.5))
-        devices[spec.id] = {
-          ...device,
-          watts,
-          powerSource: reading.source,
-          energyWh:
-            device.energyWh + (((device.watts + watts) / 2) * dt) / 3600,
-        }
-      })
+      const next = { ...state, ...advancePower(state, seconds) }
       return {
-        devices,
-        sessionSeconds: elapsed,
-        history: recordPower(state.history, devices, now),
+        ...next,
+        history: recordPower(state.history, next.devices, now),
       }
     }),
 }))

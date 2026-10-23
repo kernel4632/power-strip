@@ -7,13 +7,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "prebuild:pages": "npm run check:data && npm run check:interaction",
+    "prebuild:pages": "npm run check:data && npm run check:interaction && npm run check:energy",
     "build:pages": "npm run build -- --base=/power-strip/",
     "typecheck": "tsc -b",
     "lint": "node scripts/check-ui.mjs && oxlint",
     "check:ui": "node scripts/check-ui.mjs",
     "check:data": "node scripts/check-data.mjs",
     "check:interaction": "node scripts/check-interaction.mjs",
+    "check:energy": "node scripts/check-energy.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

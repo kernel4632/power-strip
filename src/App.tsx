@@ -98,12 +98,10 @@ export default function App() {
     }
   }, [state.night])
   useEffect(() => {
-    let last = performance.now()
-    const timer = setInterval(() => {
-      const now = performance.now()
-      usePowerStore.getState().tick((now - last) / 1000, Date.now())
-      last = now
-    }, 1000)
+    const sync = () => usePowerStore.getState().sync()
+    sync()
+    const timer = setInterval(sync, 1000)
+    document.addEventListener('visibilitychange', sync)
     const key = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return
       if (
@@ -125,6 +123,7 @@ export default function App() {
     window.addEventListener('keydown', key)
     return () => {
       clearInterval(timer)
+      document.removeEventListener('visibilitychange', sync)
       window.removeEventListener('keydown', key)
     }
   }, [])
