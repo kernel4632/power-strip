@@ -45,6 +45,9 @@ import type { CameraView } from './types'
 const Scene = lazy(() =>
   import('./scene/Scene').then((m) => ({ default: m.Scene })),
 )
+const WorkbenchPage = lazy(() =>
+  import('./workbench/WorkbenchPage').then((m) => ({ default: m.WorkbenchPage })),
+)
 class SceneBoundary extends Component<
   { children: ReactNode },
   { failed: boolean }
@@ -80,6 +83,17 @@ export default function App() {
   const isMobile = useIsMobile()
   const state = usePowerStore()
   const [menu, setMenu] = useState<'camera' | 'help' | null>(null)
+  const [workbench, setWorkbench] = useState(() => window.location.hash === '#workbench')
+  useEffect(() => {
+    const syncRoute = () => setWorkbench(window.location.hash === '#workbench')
+    syncRoute()
+    window.addEventListener('hashchange', syncRoute)
+    window.addEventListener('popstate', syncRoute)
+    return () => {
+      window.removeEventListener('hashchange', syncRoute)
+      window.removeEventListener('popstate', syncRoute)
+    }
+  }, [])
   const total = DEVICE_CATALOG.reduce(
     (sum, d) => sum + state.devices[d.id].watts,
     0,
@@ -103,7 +117,7 @@ export default function App() {
     const timer = setInterval(sync, 1000)
     document.addEventListener('visibilitychange', sync)
     const key = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || window.location.hash === '#workbench') return
       if (
         (e.target as HTMLElement).closest(
           'input,select,textarea,[contenteditable="true"],[role="slider"],[data-slot="popover-content"]',
@@ -127,6 +141,30 @@ export default function App() {
       window.removeEventListener('keydown', key)
     }
   }, [])
+  if (workbench) {
+    return (
+      <TooltipProvider>
+        <main className="relative isolate h-dvh overflow-hidden bg-background text-foreground">
+          <div className="absolute inset-0">
+            <SceneBoundary>
+              <Suspense
+                fallback={
+                  <div className="grid h-full place-items-center p-4">
+                    <Skeleton className="h-40 w-40 rounded-none" />
+                  </div>
+                }
+              >
+                    <WorkbenchPage onExit={() => {
+                      window.history.pushState(null, '', `${window.location.pathname}${window.location.search}#dorm`)
+                      setWorkbench(false)
+                    }} />
+              </Suspense>
+            </SceneBoundary>
+          </div>
+        </main>
+      </TooltipProvider>
+    )
+  }
   return (
     <TooltipProvider>
       <main className="relative isolate h-dvh overflow-hidden bg-background text-foreground">
@@ -163,6 +201,20 @@ export default function App() {
             className="pointer-events-auto flex items-center gap-0.5"
             aria-label="场景工具"
           >
+            <Button
+              variant="tool"
+              size="icon"
+              className="md:w-auto md:px-3"
+              onClick={() => {
+                setMenu(null)
+                window.history.pushState(null, '', `${window.location.pathname}${window.location.search}#workbench`)
+                setWorkbench(true)
+              }}
+              aria-label="打开 3D 功率组合实验台"
+            >
+              <Zap />
+              <span className="hidden text-xs md:inline">组合实验</span>
+            </Button>
             <Popover
               open={menu === 'camera'}
               onOpenChange={(open) => setMenu(open ? 'camera' : null)}

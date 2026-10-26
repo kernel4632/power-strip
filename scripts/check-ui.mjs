@@ -8,7 +8,12 @@ const walk = (folder) =>
     const path = join(folder, entry.name)
     return entry.isDirectory() ? walk(path) : [path]
   })
-const assemblies = [join(root, 'src/App.tsx'), ...walk(join(root, 'src/ui'))]
+const assemblies = [
+  join(root, 'src/App.tsx'),
+  join(root, 'src/workbench/WorkbenchPage.tsx'),
+  join(root, 'src/workbench/WorkbenchSidebar.tsx'),
+  ...walk(join(root, 'src/ui')),
+]
 const primitives = walk(join(root, 'src/components/ui'))
 const failures = []
 for (const path of assemblies) {
