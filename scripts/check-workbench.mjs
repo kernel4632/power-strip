@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'vite'
+import { BoxGeometry, Group, Mesh, MeshBasicMaterial, PerspectiveCamera } from 'three'
 
 const server = await createServer({
   configFile: false,
@@ -14,7 +15,8 @@ try {
   const { fitsPlacement, SOCKET_POSITIONS, TABLE_BOUNDS, plugPoint } = await server.ssrLoadModule('/src/workbench/layout.ts')
   const { resolveDragTarget } = await server.ssrLoadModule('/src/workbench/drag-target.ts')
   const { useBenchDrag } = await server.ssrLoadModule('/src/workbench/drag.ts')
-  const { placeDeviceActions, overlapsActionRect, actionConnector } = await server.ssrLoadModule('/src/workbench/action-layout.ts')
+  const { placeDeviceActions, overlapsActionRect, actionConnector, projectActionObstacles } = await server.ssrLoadModule('/src/workbench/action-layout.ts')
+  const { loadVisuals, loadPulse, deviceVisualWeight } = await server.ssrLoadModule('/src/workbench/load-visuals.ts')
   const store = useBenchStore
   const state = () => store.getState()
   const readings = () => selectReadings(state())
@@ -27,6 +29,51 @@ try {
   assert.equal(computeRisk(350, base).remainingWatts, -50)
   assert.equal(computeRisk(350, base).ratio, 1)
   assert.equal(computeRisk(-50, base).ratio, 0)
+  const normalEffect = loadVisuals(computeRisk(100, base))
+  const warningEffect = loadVisuals(computeRisk(250, base))
+  const overloadEffect = loadVisuals(computeRisk(360, base))
+  assert.equal(normalEffect.status, 'normal')
+  assert.equal(warningEffect.status, 'warning')
+  assert.equal(overloadEffect.status, 'overload')
+  assert.equal(new Set([normalEffect.color, warningEffect.color, overloadEffect.color]).size, 3)
+  for (const key of ['glow', 'haloOpacity', 'flowSpeed', 'segments', 'particleCount']) {
+    assert.ok(normalEffect[key] < warningEffect[key] && warningEffect[key] <= overloadEffect[key], `${key} must reflect load severity in the model`)
+  }
+  assert.equal(normalEffect.pulseHz, 0)
+  assert.ok(overloadEffect.pulseHz <= 1, 'overload uses a slow pulse, never rapid strobing')
+  assert.notEqual(loadPulse(overloadEffect, 0), loadPulse(overloadEffect, .25))
+  const reducedEffect = loadVisuals(computeRisk(360, base), true, true)
+  assert.equal(reducedEffect.color, overloadEffect.color)
+  assert.equal(reducedEffect.segments, overloadEffect.segments)
+  assert.equal(reducedEffect.pulseHz, 0)
+  assert.equal(reducedEffect.flowSpeed, 0)
+  assert.equal(loadPulse(reducedEffect, 0), loadPulse(reducedEffect, 4), 'reduced-motion keeps all severity cues static')
+  for (const effect of [loadVisuals(computeRisk(360, base), false), loadVisuals(computeRisk(0, base))]) {
+    assert.equal(effect.active, false)
+    assert.equal(effect.glow, 0)
+    assert.equal(effect.haloOpacity, 0)
+    assert.equal(effect.particleCount, 0)
+    assert.equal(effect.segments, 0)
+  }
+  assert.ok(deviceVisualWeight(1800, 2500) > deviceVisualWeight(35, 2500), 'appliance wire intensity follows its actual contribution')
+  assert.equal(deviceVisualWeight(0, 2500), 0)
+  assert.equal(deviceVisualWeight(20000, 2500), 1)
+  const effectScene = new Group()
+  const effectGeometry = new BoxGeometry(.8, .8, .1)
+  const effectMaterial = new MeshBasicMaterial()
+  for (const [index, name] of ['room-load-meter', 'bench-power-strip', 'strip-warning-crest'].entries()) {
+    const object = new Mesh(effectGeometry, effectMaterial)
+    object.name = name
+    object.position.set(index - 1, 0, 0)
+    effectScene.add(object)
+  }
+  const effectCamera = new PerspectiveCamera(45, 1, .1, 20)
+  effectCamera.position.set(0, 0, 5)
+  effectCamera.lookAt(0, 0, 0)
+  const projectedEffects = projectActionObstacles(effectScene, effectCamera, [], { width: 500, height: 500 })
+  assert.deepEqual(projectedEffects.map(effect => effect.id), ['room-load-meter', 'bench-power-strip', 'strip-warning-crest'], 'local action panels must not hide the 3D severity indicators')
+  effectGeometry.dispose()
+  effectMaterial.dispose()
 
   const panelSize = { width: 224, height: 82 }
   for (const viewport of [{ width: 390, height: 366 }, { width: 736, height: 594 }, { width: 480, height: 1310 }]) {
@@ -111,6 +158,9 @@ try {
   assert.equal(readings().strip.watts, 0)
   assert.equal(readings().room.watts, state().settings.backgroundWatts)
   assert.equal(item('item-kettle').on, true, 'master switch does not alter individual switches')
+  assert.equal(loadVisuals(readings().strip, state().masterOn).active, false)
+  assert.equal(loadVisuals(readings().room).active, true, 'background dorm load remains visible when the strip is switched off')
+  assert.equal(deviceVisualWeight(readings().itemWatts['item-kettle'], state().settings.strip.limitWatts), 0)
   state().setMasterOn(true)
   assert.equal(readings().strip.watts + state().settings.backgroundWatts, readings().room.watts, 'background load belongs only to dorm total')
 
@@ -210,7 +260,7 @@ try {
   assert.deepEqual(state().settings, DEFAULT_BENCH_SETTINGS)
   assert.equal(state().selectionId, null)
   assert.equal(readings().strip.watts, 1740)
-  console.log('Workbench checks passed: action-panel avoidance and docking fallback, continuous drag targets, exact drops, independent plug/body movement, cancellation, risk boundaries, totals, settings and presets.')
+  console.log('Workbench checks passed: model load severity, off/unplug isolation, reduced motion, action-panel avoidance, continuous drag targets, exact drops, risk boundaries, totals and presets.')
 } finally {
   await server.close()
 }

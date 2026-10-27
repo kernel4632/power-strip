@@ -53,32 +53,32 @@ export function actionConnector(anchor: ActionRect, panel: ActionRect) {
   return { x1, y1, x2: clamp(x1, panel.x, panel.x + panel.width), y2: clamp(y1, panel.y, panel.y + panel.height) }
 }
 
-/** Only project bodies and plugs, not their long cables or the selection ring. */
+/** Protect appliances and risk indicators, not long cables or selection rings. */
 export function projectActionObstacles(scene: Object3D, camera: Camera, items: BenchItem[], viewport: { width: number; height: number }): ActionRect[] {
   const box = new Box3()
   const point = new Vector3()
   const rectangles: ActionRect[] = []
   scene.updateMatrixWorld(true)
   camera.updateMatrixWorld()
-  for (const item of items) {
-    for (const prefix of ['bench-body-', 'bench-plug-']) {
-      const object = scene.getObjectByName(`${prefix}${item.id}`)
-      if (!object) continue
-      box.setFromObject(object)
-      if (box.isEmpty()) continue
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-      let inFront = false
-      for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
-        point.set(x, y, z).project(camera)
-        if (point.z >= -1 && point.z <= 1) inFront = true
-        const px = (point.x + 1) * viewport.width / 2
-        const py = (1 - point.y) * viewport.height / 2
-        minX = Math.min(minX, px); maxX = Math.max(maxX, px)
-        minY = Math.min(minY, py); maxY = Math.max(maxY, py)
-      }
-      if (inFront && maxX >= 0 && minX <= viewport.width && maxY >= 0 && minY <= viewport.height) {
-        rectangles.push({ id: `${prefix}${item.id}`, x: minX, y: minY, width: maxX - minX, height: maxY - minY })
-      }
+  const names = items.flatMap(item => [`bench-body-${item.id}`, `bench-plug-${item.id}`])
+  names.push('room-load-meter', 'bench-power-strip', 'strip-warning-crest')
+  for (const name of names) {
+    const object = scene.getObjectByName(name)
+    if (!object) continue
+    box.setFromObject(object)
+    if (box.isEmpty()) continue
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    let inFront = false
+    for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
+      point.set(x, y, z).project(camera)
+      if (point.z >= -1 && point.z <= 1) inFront = true
+      const px = (point.x + 1) * viewport.width / 2
+      const py = (1 - point.y) * viewport.height / 2
+      minX = Math.min(minX, px); maxX = Math.max(maxX, px)
+      minY = Math.min(minY, py); maxY = Math.max(maxY, py)
+    }
+    if (inFront && maxX >= 0 && minX <= viewport.width && maxY >= 0 && minY <= viewport.height) {
+      rectangles.push({ id: name, x: minX, y: minY, width: maxX - minX, height: maxY - minY })
     }
   }
   return rectangles

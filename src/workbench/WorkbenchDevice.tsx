@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
-import { BenchBox, BenchCylinder, BenchRod, Cable, Screen } from './WorkbenchGeometry'
+import { BenchBox, BenchCylinder, BenchRod, Cable, PowerFlow, Screen } from './WorkbenchGeometry'
 import type { BenchItem, BenchPoint } from './types'
 import { BENCH_MAP } from './catalog'
 import { BENCH_Y, plugPoint } from './layout'
+import type { LoadVisual } from './load-visuals'
+import { LoadHalo } from './WorkbenchLoadEffects'
 
 const MODEL_GROUND: Record<BenchItem['kind'], number> = {
   kettle: .04,
@@ -73,7 +75,7 @@ function Cooker({ color }: { color: string }) {
   </group>
 }
 
-function Laptop({ color, gaming }: { color: string; gaming?: boolean }) {
+function Laptop({ color, gaming, on }: { color: string; gaming?: boolean; on: boolean }) {
   const keyColor = gaming ? '#456d75' : '#6d7772'
   return <group>
     <BenchBox size={[.75, .038, .51]} position={[0, .025, .07]} color={color} radius={.028} metalness={.58} roughness={.28} />
@@ -84,8 +86,8 @@ function Laptop({ color, gaming }: { color: string; gaming?: boolean }) {
     <BenchBox size={[.035, .006, .19]} position={[.31, .052, .085]} color="#68746e" radius={.006} />
     <group position={[0, .03, -.19]} rotation={[-.15, 0, 0]}>
       <BenchBox size={[.75, .47, .025]} position={[0, .23, 0]} color={color} radius={.023} metalness={.56} roughness={.28} />
-      <Screen size={[.675, .386]} color={gaming ? '#1c3546' : '#18363d'} glow />
-      <mesh position={[0, .23, .014]}><circleGeometry args={[.018, 20]} /><meshStandardMaterial color="#c5b789" metalness={.48} /></mesh>
+      <Screen size={[.675, .386]} position={[0, .23, .014]} color={on ? gaming ? '#2b607b' : '#27716c' : '#101a19'} glow={on} />
+      <mesh position={[0, .23, -.014]} rotation={[0, Math.PI, 0]}><circleGeometry args={[.018, 20]} /><meshStandardMaterial color="#c5b789" metalness={.48} /></mesh>
       {gaming && <BenchBox size={[.06, .018, .012]} position={[0, .035, .026]} color="#c69b62" radius={.006} />}
     </group>
   </group>
@@ -104,54 +106,55 @@ function Lamp({ on }: { on: boolean }) {
   </group>
 }
 
-function Phone({ tablet, color }: { tablet?: boolean; color: string }) {
+function Phone({ tablet, color, on }: { tablet?: boolean; color: string; on: boolean }) {
   const width = tablet ? .7 : .24
   const depth = tablet ? .51 : .39
   return <group>
     <BenchBox size={[width, .04, depth]} position={[0, .025, 0]} color={color} radius={.028} metalness={.58} roughness={.26} />
     <BenchBox size={[width - .065, .008, depth - .075]} position={[0, .049, 0]} color="#202b2a" radius={.025} />
-    <Screen size={[width - .09, depth - .105]} color="#173940" glow rotation={[-Math.PI / 2, 0, 0]} />
+    <Screen size={[width - .09, depth - .105]} color={on ? '#2b6e77' : '#101a19'} glow={on} position={[0, .054, 0]} rotation={[-Math.PI / 2, 0, 0]} />
     <BenchCylinder position={[width * .34, .034, -depth * .36]} radius={.014} height={.012} color="#c4c9bd" metalness={.64} />
     <BenchBox size={[tablet ? .19 : .055, .006, .012]} position={[0, .055, depth * .38]} color="#65746f" radius={.004} />
     <BenchBox size={[.024, .035, .012]} position={[width / 2 + .005, .027, -.08]} color="#8e9991" radius={.005} />
   </group>
 }
 
-function AppliancePlug({ position, connected }: { position: [number, number, number]; connected: boolean }) {
+function AppliancePlug({ position, connected, visual, weight }: { position: [number, number, number]; connected: boolean; visual?: LoadVisual; weight: number }) {
   return <group position={position}>
     <BenchBox size={[.15, .046, .105]} position={[0, 0, 0]} color={connected ? '#3b433f' : '#343b38'} radius={.018} metalness={.12} roughness={.42} />
     <BenchBox size={[.045, .018, .026]} position={[0, -.012, .057]} color="#59645e" radius={.008} />
+    <BenchBox size={[.11, .008, .022]} position={[0, .026, 0]} color={weight > 0 && visual ? visual.color : '#69766e'} radius={.004} emissive={visual?.color} emissiveIntensity={weight > 0 && visual ? visual.glow * weight : 0} />
     {[-.032, .032].map(x => <BenchBox key={x} size={[.014, .04, .012]} position={[x, -.038, -.012]} color="#c2b38f" radius={.003} metalness={.78} roughness={.24} />)}
     <BenchBox size={[.014, .04, .012]} position={[0, -.038, .014]} color="#c2b38f" radius={.003} metalness={.78} roughness={.24} />
   </group>
 }
 
-function PowerLead({ item, plugPreview, onPointerDown }: { item: BenchItem; plugPreview?: BenchPoint; onPointerDown?: (event: ThreeEvent<PointerEvent>) => void }) {
+function PowerLead({ item, plugPreview, visual, weight, onPointerDown }: { item: BenchItem; plugPreview?: BenchPoint; visual?: LoadVisual; weight: number; onPointerDown?: (event: ThreeEvent<PointerEvent>) => void }) {
   const port = CORD_PORT[item.kind]
   const point = plugPreview ?? plugPoint(item)
   const connected = item.socket !== null && !plugPreview
   const plugPosition: [number, number, number] = [point[0] - item.position[0], connected ? .145 : .07, point[1] - item.position[1]]
-  const plugTail: [number, number, number] = [plugPosition[0], plugPosition[1], plugPosition[2] + .075]
-  const points: [number, number, number][] = connected
-    ? [
+  const plugX = plugPosition[0], plugY = plugPosition[1], plugZ = plugPosition[2]
+  const points = useMemo<[number, number, number][]>(() => connected ? [
       [port[0], .04, port[1]],
       [port[0] + .08, .035, port[1] - .14],
-      [port[0], .033, (port[1] + plugTail[2]) / 2],
-      [plugTail[0] * .72, .035, plugTail[2] + .04],
-      plugTail,
+      [port[0], .033, (port[1] + plugZ + .075) / 2],
+      [plugX * .72, .035, plugZ + .115],
+      [plugX, plugY, plugZ + .075],
     ]
     : [
       [port[0], .04, port[1]],
       [port[0] - .06, .035, port[1] - .12],
-      [plugPosition[0] - .18, .035, plugPosition[2] - .12],
-      [plugPosition[0] - .08, .034, plugPosition[2] + .1],
-      plugTail,
-    ]
+      [plugX - .18, .035, plugZ - .12],
+      [plugX - .08, .034, plugZ + .1],
+      [plugX, plugY, plugZ + .075],
+    ], [connected, plugX, plugY, plugZ, port])
 
   return <group>
-    <Cable points={points} color="#303633" radius={.017} />
+    <Cable points={points} color={weight > 0 && visual?.status !== 'normal' ? visual?.color : '#303633'} radius={.017} emissive={visual?.color} intensity={weight > 0 && visual ? visual.glow * weight * .32 : 0} />
+    {visual && connected && weight > 0 && <PowerFlow name={`device-flow-${item.id}`} points={points} visual={visual} weight={weight} radius={.023} />}
     <group name={`bench-plug-${item.id}`} onPointerDown={onPointerDown}>
-      <AppliancePlug position={plugPosition} connected={connected} />
+      <AppliancePlug position={plugPosition} connected={connected} visual={visual} weight={connected ? weight : 0} />
       {onPointerDown && <mesh position={plugPosition}>
         <boxGeometry args={[.24, .16, .2]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} colorWrite={false} />
@@ -165,6 +168,8 @@ export function WorkbenchDevice({
   selected,
   preview = false,
   powered = item.on && item.socket !== null && item.load > 0,
+  loadVisual,
+  loadWeight = 0,
   plugPreview,
   onClick,
   onPointerDown,
@@ -174,6 +179,8 @@ export function WorkbenchDevice({
   selected: boolean
   preview?: boolean
   powered?: boolean
+  loadVisual?: LoadVisual
+  loadWeight?: number
   plugPreview?: BenchPoint
   onClick: () => void
   onPointerDown: (event: ThreeEvent<PointerEvent>) => void
@@ -186,11 +193,11 @@ export function WorkbenchDevice({
       case 'kettle': return <Kettle color={spec.color} />
       case 'dryer': return <Dryer color={spec.color} />
       case 'cooker': return <Cooker color={spec.color} />
-      case 'gaming': return <Laptop color={spec.color} gaming />
-      case 'macbook': return <Laptop color={spec.color} />
+      case 'gaming': return <Laptop color={spec.color} gaming on={powered} />
+      case 'macbook': return <Laptop color={spec.color} on={powered} />
       case 'lamp': return <Lamp on={powered} />
-      case 'phone': return <Phone color={spec.color} />
-      default: return <Phone tablet color={spec.color} />
+      case 'phone': return <Phone color={spec.color} on={powered} />
+      default: return <Phone tablet color={spec.color} on={powered} />
     }
   }, [item.kind, powered, spec.color])
 
@@ -199,7 +206,8 @@ export function WorkbenchDevice({
     position={[item.position[0], BENCH_Y, item.position[1]]}
   >
     {selected && <mesh position={[0, .008, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[Math.max(spec.footprint[0], spec.footprint[1]) * .52, Math.max(spec.footprint[0], spec.footprint[1]) * .58, 40]} /><meshBasicMaterial color="#d5ad71" transparent opacity={.88} depthWrite={false} /></mesh>}
-    <PowerLead item={item} plugPreview={plugPreview} onPointerDown={preview ? undefined : onPlugPointerDown} />
+    {loadVisual && loadWeight > 0 && <LoadHalo name={`device-load-halo-${item.id}`} visual={{ ...loadVisual, haloOpacity: loadVisual.haloOpacity * (.25 + loadWeight * .75) }} position={[0, .004, 0]} width={spec.footprint[0] * 1.35} depth={spec.footprint[1] * 1.35} />}
+    <PowerLead item={item} plugPreview={plugPreview} visual={loadVisual} weight={powered ? loadWeight : 0} onPointerDown={preview ? undefined : onPlugPointerDown} />
     <group name={`bench-body-${item.id}`} position={[0, -groundOffset, 0]}
       onClick={preview ? undefined : (event) => { event.stopPropagation(); if (event.delta < 4) onClick() }}
       onPointerDown={preview ? undefined : (event) => { event.stopPropagation(); onPointerDown(event) }}

@@ -198,6 +198,7 @@ export function WorkbenchSidebar() {
             <Separator />
             <ThresholdStrip title="宿舍负载" reading={currentReadings.room} />
           </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">模型光效：绿色常规，黄色预警，红色脉冲超限。排插和墙面回路表分别反映两类阈值；线流越密表示该电器贡献的功率越高。光效仅为负载示意，不代表真实温度或跳闸时刻。</p>
 
           {notice && <p className="text-xs text-muted-foreground" role="status" aria-live="polite">{notice}</p>}
 

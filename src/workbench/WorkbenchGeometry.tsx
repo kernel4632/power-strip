@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { BenchPoint, RiskStatus } from './types'
 import { surfaceMaps, TILE } from '../scene/materials'
 import type { Surface } from '../scene/materials'
+import type { LoadVisual } from './load-visuals'
 
 export function BenchBox({ size, position = [0, 0, 0], color = '#d8d0bd', radius = 0.02, metalness = 0, roughness = 0.58, emissive, emissiveIntensity = 0, surface, ...props }: { size: [number, number, number]; position?: [number, number, number]; color?: string; radius?: number; metalness?: number; roughness?: number; emissive?: string; emissiveIntensity?: number; surface?: Surface; castShadow?: boolean; receiveShadow?: boolean }) {
   const width = size[0]
@@ -42,32 +43,32 @@ export function BenchRod({ from, to, radius = 0.018, color = '#49504c' }: { from
   </mesh>
 }
 
-export function Cable({ points, color = '#303633', radius = 0.018 }: { points: [number, number, number][]; color?: string; radius?: number }) {
-  const curve = new CatmullRomCurve3(points.map((p) => new Vector3(...p)))
-  return <mesh castShadow><tubeGeometry args={[curve, 32, radius, 8, false]} /><meshStandardMaterial color={color} roughness={0.8} /></mesh>
+export function Cable({ points, color = '#303633', radius = 0.018, emissive = '#000000', intensity = 0 }: { points: [number, number, number][]; color?: string; radius?: number; emissive?: string; intensity?: number }) {
+  const curve = useMemo(() => new CatmullRomCurve3(points.map(p => new Vector3(...p))), [points])
+  return <mesh castShadow><tubeGeometry args={[curve, 32, radius, 8, false]} /><meshStandardMaterial color={color} roughness={0.8} emissive={emissive} emissiveIntensity={intensity} /></mesh>
 }
 
-export function PowerFlow({ points, active, status }: { points: [number, number, number][]; active: boolean; status: RiskStatus }) {
+export function PowerFlow({ points, visual, weight = 1, radius = .024, name }: { points: [number, number, number][]; visual: LoadVisual; weight?: number; radius?: number; name?: string }) {
   const ref = useRef<Group>(null)
+  const point = useMemo(() => new Vector3(), [])
   const curve = useMemo(() => new CatmullRomCurve3(points.map(point => new Vector3(...point))), [points])
-  const color = status === 'overload' ? '#bf6957' : status === 'warning' ? '#d2a858' : '#91a88f'
+  const count = visual.active && weight > 0 ? Math.max(1, Math.ceil(visual.particleCount * weight)) : 0
   useFrame(({ clock }) => {
     if (!ref.current) return
-    ref.current.visible = active
-    const count = ref.current.children.length
+    ref.current.visible = visual.active && count > 0
     for (let index = 0; index < count; index += 1) {
-      const progress = (clock.elapsedTime * 0.12 + index / count) % 1
-      const point = curve.getPointAt(1 - progress)
+      const progress = (clock.elapsedTime * visual.flowSpeed * (.4 + weight * .6) + index / count) % 1
+      curve.getPointAt(1 - progress, point)
       ref.current.children[index].position.copy(point)
     }
   })
-  return <group ref={ref}>
-    {Array.from({ length: 4 }, (_, index) => <mesh key={index} scale={index === 0 ? 1 : .72}><sphereGeometry args={[.024, 10, 10]} /><meshBasicMaterial color={color} toneMapped={false} /></mesh>)}
+  return <group ref={ref} name={name} userData={{ speed: visual.flowSpeed, count, active: visual.active, status: visual.status }}>
+    {Array.from({ length: count }, (_, index) => <mesh key={index} scale={index === 0 ? 1 : .72}><sphereGeometry args={[radius, 8, 8]} /><meshBasicMaterial color={visual.color} toneMapped={false} /></mesh>)}
   </group>
 }
 
-export function Screen({ size, color = '#17353b', glow = false, rotation = [0, 0, 0] }: { size: [number, number]; color?: string; glow?: boolean; rotation?: [number, number, number] }) {
-  return <mesh rotation={rotation}><planeGeometry args={size} /><meshStandardMaterial color={color} roughness={0.28} emissive={glow ? color : '#000000'} emissiveIntensity={glow ? 0.45 : 0} /></mesh>
+export function Screen({ size, color = '#17353b', glow = false, rotation = [0, 0, 0], position = [0, 0, 0] }: { size: [number, number]; color?: string; glow?: boolean; rotation?: [number, number, number]; position?: [number, number, number] }) {
+  return <mesh position={position} rotation={rotation}><planeGeometry args={size} /><meshStandardMaterial color={color} roughness={0.28} emissive={glow ? color : '#000000'} emissiveIntensity={glow ? 0.45 : 0} /></mesh>
 }
 
 export function PlacementMarker({ position, valid }: { position: BenchPoint; valid: boolean }) {
@@ -94,12 +95,14 @@ export function WorkbenchFurniture() {
   </group>
 }
 
-export function PowerStrip({ on, status, socketItems, onSocketClick }: { on: boolean; status: RiskStatus; socketItems: (string | null)[]; onSocketClick: (index: number) => void }) {
-  const indicatorColor = !on ? '#8c9389' : status === 'overload' ? '#b75e4f' : status === 'warning' ? '#c89d4d' : '#829986'
+export function PowerStrip({ on, visual, socketWatts, socketItems, onSocketClick }: { on: boolean; visual: LoadVisual; socketWatts: number[]; socketItems: (string | null)[]; onSocketClick: (index: number) => void }) {
+  const status = visual.status
+  const indicatorColor = visual.color
+  const shellColor = !visual.active || status === 'normal' ? '#eeede4' : status === 'warning' ? '#ead2a5' : '#dba69a'
   return <group name="bench-power-strip" position={[0, .075, -.48]}>
-    <BenchBox size={[4.72, .09, .28]} color="#eeede4" radius={.05} roughness={.34} />
-    <BenchBox size={[4.48, .015, .235]} position={[0, .051, 0]} color="#faf9f3" radius={.033} roughness={.28} />
-    <BenchBox size={[.06, .025, .18]} position={[2.05, .054, 0]} color={indicatorColor} radius={.012} emissive={indicatorColor} emissiveIntensity={on ? status === 'overload' ? .85 : status === 'warning' ? .55 : .24 : 0} />
+    <BenchBox size={[4.72, .09, .28]} color={shellColor} radius={.05} roughness={.34} emissive={indicatorColor} emissiveIntensity={status === 'normal' ? 0 : visual.glow * .16} />
+    <BenchBox size={[4.48, .015, .235]} position={[0, .051, 0]} color={shellColor} radius={.033} roughness={.28} />
+    <BenchBox size={[.06, .025, .18]} position={[2.05, .054, 0]} color={indicatorColor} radius={.012} emissive={indicatorColor} emissiveIntensity={visual.glow} />
     <BenchBox size={[.022, .006, .07]} position={[2.05, .07, 0]} color={on ? '#f1d79b' : '#5d6b60'} radius={.002} />
     {[-1.8, -.6, .6, 1.8].map((x, i) => <group key={x} position={[x, .06, 0]} onClick={e => { e.stopPropagation(); onSocketClick(i) }}>
       {/* Tall invisible-ish click target covers only the recessed socket aperture. */}
@@ -110,7 +113,7 @@ export function PowerStrip({ on, status, socketItems, onSocketClick }: { on: boo
       <BenchBox size={[.42, .004, .14]} position={[0, .021, 0]} color="#cbd2c8" radius={.016} />
       {[-.075, .075].map(dx => <BenchBox key={dx} size={[.018, .004, .072]} position={[dx, .026, .026]} color="#5c675e" radius={.006} />)}
       <BenchBox size={[.035, .004, .078]} position={[0, .026, -.04]} color="#687269" radius={.009} />
-      <BenchCylinder position={[0, .029, -.082]} radius={.012} height={.006} color={socketItems[i] ? (on ? indicatorColor : '#8c9389') : '#b1b8ae'} />
+      <BenchCylinder position={[0, .029, -.082]} radius={.012} height={.006} color={socketWatts[i] > 0 ? indicatorColor : socketItems[i] ? '#8c9389' : '#b1b8ae'} />
       <BenchBox size={[.13, .007, .012]} position={[0, .034, .087]} color="#aeb8ad" radius={.004} />
     </group>)}
   </group>

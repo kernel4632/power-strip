@@ -15,6 +15,10 @@ import { DeviceActionProjection } from './DeviceActionProjection'
 import type { ActionProjectionProps } from './DeviceActionProjection'
 import { projectActionObstacles } from './action-layout'
 import { Cable, PlacementMarker, PowerFlow, PowerStrip, WallBackdrop, WallOutlet, WorkbenchFurniture } from './WorkbenchGeometry'
+import { RoomLoadMeter, StripLoadEffects } from './WorkbenchLoadEffects'
+import { deviceVisualWeight, loadVisuals } from './load-visuals'
+import type { LoadVisual } from './load-visuals'
+import { useReducedMotion } from './useReducedMotion'
 
 const TABLE_PLANE = new Plane(new Vector3(0, 1, 0), -BENCH_Y)
 const CAMERA_TARGET: [number, number, number] = [0, -.15, .7]
@@ -125,14 +129,13 @@ function DragController() {
   return null
 }
 
-function BenchDevice({ item }: { item: BenchItem }) {
+function BenchDevice({ item, visual, watts, limitWatts }: { item: BenchItem; visual: LoadVisual; watts: number; limitWatts: number }) {
   const selected = useBenchStore(state => state.selectedId === item.id)
   const drag = useBenchDrag(state => state.drag)
   const position = useBenchDrag(state => state.previewPosition)
   const moved = useBenchDrag(state => state.hasMoved)
   const rayPoint = usePointerRay()
   const get = useThree(state => state.get)
-  const masterOn = useBenchStore(state => state.masterOn)
   const active = moved && position && drag?.itemId === item.id
   const displayed = active && drag.mode === 'device' ? { ...item, position } : item
   const start = (event: ThreeEvent<PointerEvent>, mode: 'device' | 'plug') => {
@@ -147,7 +150,7 @@ function BenchDevice({ item }: { item: BenchItem }) {
     useBenchDrag.getState().start(item.kind, item.id, event, mode, [origin[0] - point[0], origin[1] - point[1]])
   }
   // One model instance throughout the gesture: no original+ghost z-fighting.
-  return <WorkbenchDevice item={displayed} selected={selected} powered={masterOn && item.on && item.socket !== null && item.load > 0}
+  return <WorkbenchDevice item={displayed} selected={selected} powered={watts > 0} loadVisual={visual} loadWeight={deviceVisualWeight(watts, limitWatts)}
     plugPreview={active && drag.mode === 'plug' ? position : undefined}
     onClick={() => useBenchStore.getState().select(item.id)}
     onPointerDown={event => start(event, 'device')}
@@ -155,9 +158,9 @@ function BenchDevice({ item }: { item: BenchItem }) {
   />
 }
 
-function BenchItems() {
+function BenchItems({ visual, itemWatts, limitWatts }: { visual: LoadVisual; itemWatts: Record<string, number>; limitWatts: number }) {
   const items = useBenchStore(state => state.items)
-  return <>{items.map(item => <BenchDevice key={item.id} item={item} />)}</>
+  return <>{items.map(item => <BenchDevice key={item.id} item={item} visual={visual} watts={itemWatts[item.id] ?? 0} limitWatts={limitWatts} />)}</>
 }
 
 function DragPreview() {
@@ -225,6 +228,12 @@ function Diagnostics() {
           }
         }),
         sockets: SOCKET_POSITIONS.map(point => screen(point, BENCH_Y + .14)),
+        loadEffects: {
+          strip: scene.getObjectByName('strip-load-effects')?.userData,
+          room: scene.getObjectByName('room-load-meter')?.userData,
+          supplyFlow: scene.getObjectByName('supply-power-flow')?.userData,
+          devices: store.items.map(item => ({ id: item.id, halo: scene.getObjectByName(`device-load-halo-${item.id}`)?.userData ?? null, flow: scene.getObjectByName(`device-flow-${item.id}`)?.userData ?? null })),
+        },
         drag: useBenchDrag.getState(),
         catalogPreviews: scene.children.flatMap(child => child.getObjectsByProperty('name', 'bench-catalog-preview')).length,
       }
@@ -238,8 +247,15 @@ function SceneContent(props: ActionProjectionProps) {
   const items = useBenchStore(state => state.items)
   const masterOn = useBenchStore(state => state.masterOn)
   const settings = useBenchStore(state => state.settings)
+  const reducedMotion = useReducedMotion()
   const socketItems = SOCKET_POSITIONS.map((_, index) => items.find(item => item.socket === index)?.id ?? null)
   const readings = selectReadings({ items, masterOn, settings })
+  const stripVisual = loadVisuals(readings.strip, masterOn, reducedMotion)
+  const roomVisual = loadVisuals(readings.room, true, reducedMotion)
+  const socketWatts = SOCKET_POSITIONS.map((_, index) => {
+    const item = items.find(candidate => candidate.socket === index)
+    return item ? readings.itemWatts[item.id] : 0
+  })
   return <>
     <color attach="background" args={['#d8d2c3']} />
     <Suspense fallback={null}><Environment files={hdriUrl} environmentIntensity={.24} /></Suspense>
@@ -248,12 +264,14 @@ function SceneContent(props: ActionProjectionProps) {
     <directionalLight position={[-3.5, 6, 4]} intensity={2.8} color="#ffe0ad" castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-5} shadow-camera-right={5} shadow-camera-top={5} shadow-camera-bottom={-5} shadow-bias={-.0001} shadow-normalBias={.02} />
     <directionalLight position={[4, 3, -4]} intensity={.55} color="#d6e5eb" />
     <WallBackdrop /><WorkbenchFurniture /><WallOutlet status={readings.room.status} />
-    <Cable points={SUPPLY_CABLE} color="#4a4a42" radius={.022} />
-    <PowerFlow points={SUPPLY_CABLE} active={masterOn && readings.strip.watts > 0} status={readings.strip.status} />
-    <PowerStrip on={masterOn} status={readings.strip.status} socketItems={socketItems} onSocketClick={index => {
+    <RoomLoadMeter visual={roomVisual} />
+    <Cable points={SUPPLY_CABLE} color={stripVisual.status === 'normal' ? '#4a4a42' : stripVisual.color} radius={.022} emissive={stripVisual.color} intensity={stripVisual.active ? stripVisual.glow * .32 : 0} />
+    <PowerFlow name="supply-power-flow" points={SUPPLY_CABLE} visual={stripVisual} radius={.034} />
+    <PowerStrip on={masterOn} visual={stripVisual} socketWatts={socketWatts} socketItems={socketItems} onSocketClick={index => {
       if (socketItems[index]) useBenchStore.getState().select(socketItems[index])
     }} />
-    <BenchItems /><DragPreview /><DragController /><DeviceActionProjection {...props} />
+    <StripLoadEffects visual={stripVisual} socketWatts={socketWatts} />
+    <BenchItems visual={stripVisual} itemWatts={readings.itemWatts} limitWatts={settings.strip.limitWatts} /><DragPreview /><DragController /><DeviceActionProjection {...props} />
     <OrbitControls makeDefault enableDamping dampingFactor={.08} minPolarAngle={.35} maxPolarAngle={1.42} minDistance={4.5} maxDistance={60} target={CAMERA_TARGET} />
     <CameraFraming /><Diagnostics />
   </>
