@@ -12,6 +12,7 @@ const assemblies = [
   join(root, 'src/App.tsx'),
   join(root, 'src/workbench/WorkbenchPage.tsx'),
   join(root, 'src/workbench/WorkbenchSidebar.tsx'),
+  join(root, 'src/workbench/WorkbenchPalette.tsx'),
   ...walk(join(root, 'src/ui')),
 ]
 const primitives = walk(join(root, 'src/components/ui'))

@@ -1,10 +1,9 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
-import { Mesh } from 'three'
-import type { Group } from 'three'
+import { useMemo } from 'react'
+import type { ThreeEvent } from '@react-three/fiber'
 import { BenchBox, BenchCylinder, BenchRod, Cable, Screen } from './WorkbenchGeometry'
 import type { BenchItem, BenchPoint } from './types'
 import { BENCH_MAP } from './catalog'
-import { BENCH_Y, SOCKET_POSITIONS } from './layout'
+import { BENCH_Y, plugPoint } from './layout'
 
 const MODEL_GROUND: Record<BenchItem['kind'], number> = {
   kettle: .04,
@@ -127,15 +126,13 @@ function AppliancePlug({ position, connected }: { position: [number, number, num
   </group>
 }
 
-function PowerLead({ item, ghost }: { item: BenchItem; ghost: boolean }) {
-  const spec = BENCH_MAP[item.kind]
+function PowerLead({ item, plugPreview, onPointerDown }: { item: BenchItem; plugPreview?: BenchPoint; onPointerDown?: (event: ThreeEvent<PointerEvent>) => void }) {
   const port = CORD_PORT[item.kind]
-  const socket = item.socket === null ? null : SOCKET_POSITIONS[item.socket]
-  const plugPosition: [number, number, number] = socket
-    ? [socket[0] - item.position[0], .145, socket[1] - item.position[1]]
-    : [spec.footprint[0] * .65, .042, spec.footprint[1] * .25]
+  const point = plugPreview ?? plugPoint(item)
+  const connected = item.socket !== null && !plugPreview
+  const plugPosition: [number, number, number] = [point[0] - item.position[0], connected ? .145 : .07, point[1] - item.position[1]]
   const plugTail: [number, number, number] = [plugPosition[0], plugPosition[1], plugPosition[2] + .075]
-  const points: [number, number, number][] = socket
+  const points: [number, number, number][] = connected
     ? [
       [port[0], .04, port[1]],
       [port[0] + .08, .035, port[1] - .14],
@@ -152,27 +149,36 @@ function PowerLead({ item, ghost }: { item: BenchItem; ghost: boolean }) {
     ]
 
   return <group>
-    <Cable points={points} color={ghost ? '#555c56' : '#303633'} radius={.017} />
-    <AppliancePlug position={plugPosition} connected={socket !== null} />
+    <Cable points={points} color="#303633" radius={.017} />
+    <group onPointerDown={onPointerDown}>
+      <AppliancePlug position={plugPosition} connected={connected} />
+      {onPointerDown && <mesh position={plugPosition}>
+        <boxGeometry args={[.24, .16, .2]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} colorWrite={false} />
+      </mesh>}
+    </group>
   </group>
 }
 
 export function WorkbenchDevice({
   item,
   selected,
-  ghost = false,
+  preview = false,
+  plugPreview,
   onClick,
   onPointerDown,
+  onPlugPointerDown,
 }: {
   item: BenchItem
   selected: boolean
-  ghost?: boolean
+  preview?: boolean
+  plugPreview?: BenchPoint
   onClick: () => void
-  onPointerDown: (e: { pointerId: number; clientX: number; clientY: number; stopPropagation: () => void }) => void
+  onPointerDown: (event: ThreeEvent<PointerEvent>) => void
+  onPlugPointerDown?: (event: ThreeEvent<PointerEvent>) => void
 }) {
   const spec = BENCH_MAP[item.kind]
   const groundOffset = MODEL_GROUND[item.kind]
-  const modelRef = useRef<Group>(null)
   const model = useMemo(() => {
     switch (item.kind) {
       case 'kettle': return <Kettle color={spec.color} />
@@ -186,37 +192,15 @@ export function WorkbenchDevice({
     }
   }, [item.kind, item.on, spec.color])
 
-  useLayoutEffect(() => {
-    if (!modelRef.current) return
-    modelRef.current.traverse(object => {
-      if (!(object instanceof Mesh)) return
-      const materials = Array.isArray(object.material) ? object.material : [object.material]
-      for (const material of materials) {
-        const original = material.userData.benchGhostOriginal as { opacity: number; transparent: boolean; depthWrite: boolean } | undefined
-        if (ghost) {
-          if (!original) material.userData.benchGhostOriginal = { opacity: material.opacity, transparent: material.transparent, depthWrite: material.depthWrite }
-          const saved = material.userData.benchGhostOriginal as { opacity: number; transparent: boolean; depthWrite: boolean }
-          material.opacity = saved.opacity * .48
-          material.transparent = true
-          material.depthWrite = false
-        } else if (original) {
-          material.opacity = original.opacity
-          material.transparent = original.transparent
-          material.depthWrite = original.depthWrite
-          delete material.userData.benchGhostOriginal
-        }
-        material.needsUpdate = true
-      }
-    })
-  }, [ghost, model])
-
   return <group
+    name={preview ? 'bench-catalog-preview' : `bench-device-${item.id}`}
     position={[item.position[0], BENCH_Y, item.position[1]]}
-    onClick={ghost ? undefined : (event) => { event.stopPropagation(); if (event.delta < 4) onClick() }}
-    onPointerDown={ghost ? undefined : (event) => { event.stopPropagation(); onPointerDown(event as never) }}
   >
     {selected && <mesh position={[0, .008, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[Math.max(spec.footprint[0], spec.footprint[1]) * .52, Math.max(spec.footprint[0], spec.footprint[1]) * .58, 40]} /><meshBasicMaterial color="#d5ad71" transparent opacity={.88} depthWrite={false} /></mesh>}
-    <PowerLead item={item} ghost={ghost} />
-    <group ref={modelRef} position={[0, -groundOffset, 0]}>{model}</group>
+    <PowerLead item={item} plugPreview={plugPreview} onPointerDown={preview ? undefined : onPlugPointerDown} />
+    <group position={[0, -groundOffset, 0]}
+      onClick={preview ? undefined : (event) => { event.stopPropagation(); if (event.delta < 4) onClick() }}
+      onPointerDown={preview ? undefined : (event) => { event.stopPropagation(); onPointerDown(event) }}
+    >{model}</group>
   </group>
 }

@@ -20,6 +20,8 @@ export interface BenchItem {
   on: boolean
   load: number
   customWatts: number | null
+  /** World-space resting point for an unplugged lead. */
+  plugPosition?: BenchPoint
 }
 export interface BenchLimits { warningWatts: number; limitWatts: number }
 export interface BenchSettings { strip: BenchLimits; room: BenchLimits; backgroundWatts: number }
@@ -45,4 +47,6 @@ export interface BenchDrag extends BenchPointer {
   startY: number
   kind: BenchKind
   itemId: string | null
+  mode: 'catalog' | 'device' | 'plug'
+  offset: BenchPoint
 }

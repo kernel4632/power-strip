@@ -18,17 +18,32 @@ export function fitsTable(kind: BenchKind, position: BenchPoint) {
 export function fitsPlacement(kind: BenchKind, position: BenchPoint, items: BenchItem[], ignoreId?: string) {
   if (!fitsTable(kind, position)) return false
   const [w, d] = BENCH_MAP[kind].footprint
+  // The strip is a real obstacle, not an alternative device drop zone.
+  if (Math.abs(position[0]) < 2.4 + w / 2 && Math.abs(position[1] + 0.48) < 0.18 + d / 2) return false
   return items.filter(item => item.id !== ignoreId).every(item => {
     const [ow, od] = BENCH_MAP[item.kind].footprint
     return Math.abs(position[0] - item.position[0]) >= (w + ow) / 2 + 0.12 || Math.abs(position[1] - item.position[1]) >= (d + od) / 2 + 0.12
   })
 }
+export function clampPlacement(kind: BenchKind, desired: BenchPoint): BenchPoint {
+  const [w, d] = BENCH_MAP[kind].footprint
+  return [
+    Math.max(TABLE_BOUNDS.minX + w / 2, Math.min(TABLE_BOUNDS.maxX - w / 2, desired[0])),
+    Math.max(TABLE_BOUNDS.minZ + d / 2, Math.min(TABLE_BOUNDS.maxZ - d / 2, desired[1])),
+  ]
+}
+
+export function plugPoint(item: BenchItem): BenchPoint {
+  if (item.socket !== null) return SOCKET_POSITIONS[item.socket]
+  if (item.plugPosition) return item.plugPosition
+  const [width, depth] = BENCH_MAP[item.kind].footprint
+  return [Math.min(TABLE_BOUNDS.maxX - .1, item.position[0] + width * .65), Math.min(TABLE_BOUNDS.maxZ - .1, item.position[1] + depth * .25)]
+}
 export function fitsSocketPlacement(_kind: BenchKind, socket: number, _items: BenchItem[], _ignoreId?: string) {
   return Number.isInteger(socket) && socket >= 0 && socket < SOCKET_POSITIONS.length
 }
 export function findPlacement(kind: BenchKind, items: BenchItem[], desired: BenchPoint = [0, 1], ignoreId?: string): BenchPoint | null {
-  const [w, d] = BENCH_MAP[kind].footprint
-  const clamped: BenchPoint = [Math.max(TABLE_BOUNDS.minX + w / 2, Math.min(TABLE_BOUNDS.maxX - w / 2, desired[0])), Math.max(TABLE_BOUNDS.minZ + d / 2, Math.min(TABLE_BOUNDS.maxZ - d / 2, desired[1]))]
+  const clamped = clampPlacement(kind, desired)
   const candidates = [clamped, ...PLACEMENT_PADS].sort((a, b) => Math.hypot(a[0] - desired[0], a[1] - desired[1]) - Math.hypot(b[0] - desired[0], b[1] - desired[1]))
   return candidates.find(point => fitsPlacement(kind, point, items, ignoreId)) ?? null
 }

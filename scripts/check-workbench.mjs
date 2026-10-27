@@ -4,14 +4,16 @@ import { createServer } from 'vite'
 const server = await createServer({
   configFile: false,
   optimizeDeps: { noDiscovery: true, include: [] },
-  server: { middlewareMode: true },
+  server: { middlewareMode: true, hmr: false, ws: false },
 })
 
 try {
   const { computeRisk } = await server.ssrLoadModule('/src/workbench/risk.ts')
   const { useBenchStore, selectReadings } = await server.ssrLoadModule('/src/workbench/store.ts')
   const { BENCH_MAX_ITEMS, DEFAULT_BENCH_SETTINGS } = await server.ssrLoadModule('/src/workbench/catalog.ts')
-  const { fitsPlacement, SOCKET_POSITIONS, TABLE_BOUNDS } = await server.ssrLoadModule('/src/workbench/layout.ts')
+  const { fitsPlacement, SOCKET_POSITIONS, TABLE_BOUNDS, plugPoint } = await server.ssrLoadModule('/src/workbench/layout.ts')
+  const { resolveDragTarget } = await server.ssrLoadModule('/src/workbench/drag-target.ts')
+  const { useBenchDrag } = await server.ssrLoadModule('/src/workbench/drag.ts')
   const store = useBenchStore
   const state = () => store.getState()
   const readings = () => selectReadings(state())
@@ -86,17 +88,58 @@ try {
   assert.equal(readings().strip.watts + state().settings.backgroundWatts, readings().room.watts, 'background load belongs only to dorm total')
 
   const phone = item('item-phone')
-  assert.equal(state().moveItem(phone.id, { position: [3.5, 2.1] }), true, 'out-of-bounds drops find a legal placement')
+  const originalPhone = { ...phone }
+  assert.equal(state().moveItem(phone.id, { position: [3.5, 2.1] }), false, 'invalid exact drop must not teleport to a predefined pad')
+  assert.deepEqual(item(phone.id), originalPhone)
+  assert.equal(state().moveItem(phone.id, { position: [3.15, .05] }), true)
   const movedPhone = item(phone.id)
-  assert.equal(movedPhone.socket, null)
+  assert.equal(movedPhone.socket, 3, 'moving the appliance keeps its plug connected')
+  assert.deepEqual(movedPhone.position, [3.15, .05], 'valid drops keep the exact requested coordinates')
   assert.ok(movedPhone.position[0] - 0.33 / 2 >= TABLE_BOUNDS.minX - 1e-8)
   assert.ok(movedPhone.position[0] + 0.33 / 2 <= TABLE_BOUNDS.maxX + 1e-8)
   assert.ok(movedPhone.position[1] - 0.4 / 2 >= TABLE_BOUNDS.minZ - 1e-8)
   assert.ok(movedPhone.position[1] + 0.4 / 2 <= TABLE_BOUNDS.maxZ + 1e-8)
   assert.ok(fitsPlacement(movedPhone.kind, movedPhone.position, state().items, movedPhone.id))
   const cooker = item('item-cooker')
-  assert.equal(state().moveItem(cooker.id, { position: movedPhone.position }), true, 'colliding drop is routed to a free position')
-  assert.ok(fitsPlacement(cooker.kind, item(cooker.id).position, state().items, cooker.id))
+  const cookerBefore = { ...cooker }
+  assert.equal(state().moveItem(cooker.id, { position: movedPhone.position }), false, 'colliding drop is rejected, not rerouted')
+  assert.deepEqual(item(cooker.id), cookerBefore)
+  assert.equal(state().addItem('phone', { position: movedPhone.position }), null, 'explicit catalog drops cannot be silently moved')
+  assert.equal(state().disconnectItem(phone.id, [2, 1.8]), true)
+  assert.equal(item(phone.id).socket, null)
+  assert.deepEqual(item(phone.id).position, [3.15, .05], 'unplugging does not move the appliance')
+  assert.deepEqual(plugPoint(item(phone.id)), [2, 1.8])
+
+  state().reset()
+  const drag = { kind: 'phone', itemId: null, pointerId: 7, clientX: 10, clientY: 10, startX: 10, startY: 10, mode: 'catalog', offset: [0, 0] }
+  const unchanged = structuredClone(state().items)
+  for (let index = 0; index < 40; index += 1) {
+    const desired = [-1.5 + index * .017, 1.3]
+    const target = resolveDragTarget(drag, desired, state().items)
+    assert.deepEqual(target.position, desired, 'preview follows every small pointer movement, never snapping to pads')
+    assert.equal(target.valid, true)
+  }
+  const collision = resolveDragTarget(drag, item('item-kettle').position, state().items)
+  assert.equal(collision.valid, false)
+  assert.deepEqual(collision.position, item('item-kettle').position, 'invalid preview stays under the pointer')
+  const bodyOnStrip = resolveDragTarget({ ...drag, itemId: 'item-phone', mode: 'device' }, SOCKET_POSITIONS[3], state().items)
+  assert.equal(bodyOnStrip.socket, null, 'only dragging a plug can snap to a socket')
+  assert.equal(bodyOnStrip.valid, false, 'an appliance cannot be placed on top of the strip')
+  const plugDrag = { ...drag, itemId: 'item-phone', mode: 'plug' }
+  assert.equal(resolveDragTarget(plugDrag, SOCKET_POSITIONS[0], state().items).valid, false)
+  const freeOutlet = resolveDragTarget(plugDrag, SOCKET_POSITIONS[3], state().items)
+  assert.equal(freeOutlet.valid, true)
+  assert.equal(freeOutlet.socket, 3)
+  const offsetTarget = resolveDragTarget({ ...drag, itemId: 'item-phone', mode: 'device', offset: [.05, -.03] }, [-1.2, 1.33], state().items)
+  assert.ok(Math.abs(offsetTarget.position[0] + 1.15) < 1e-9 && Math.abs(offsetTarget.position[1] - 1.3) < 1e-9, 'grab offset is preserved')
+  assert.deepEqual(state().items, unchanged, 'previews never commit state')
+  useBenchDrag.getState().start('phone', null, drag, 'catalog')
+  useBenchDrag.getState().preview([-1.2, 1.3], null, true)
+  assert.equal(useBenchDrag.getState().hasMoved, true)
+  useBenchDrag.getState().cancel('test cancellation')
+  assert.equal(useBenchDrag.getState().drag, null)
+  assert.equal(useBenchDrag.getState().previewPosition, null)
+  assert.equal(useBenchDrag.getState().message, 'test cancellation')
 
   state().reset()
   let added = 0
@@ -140,7 +183,7 @@ try {
   assert.deepEqual(state().settings, DEFAULT_BENCH_SETTINGS)
   assert.equal(state().selectionId, null)
   assert.equal(readings().strip.watts, 1740)
-  console.log('Workbench checks passed: risk boundaries, synchronous totals, placements, sockets, settings, item limits, custom power and presets.')
+  console.log('Workbench checks passed: continuous drag targets, exact drops, overlap rejection, independent plug/body movement, cancellation, risk boundaries, totals, settings and presets.')
 } finally {
   await server.close()
 }

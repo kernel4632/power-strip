@@ -4,8 +4,6 @@ import {
   ArrowLeft,
   ArrowUpRight,
   ChevronDown,
-  GripVertical,
-  Plus,
   RotateCcw,
   Settings2,
   Trash2,
@@ -20,13 +18,11 @@ import { Separator } from '@/components/ui/separator'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
-import { BENCH_CATALOG, BENCH_MAP, BENCH_MAX_ITEMS } from './catalog'
-import { findPlacement } from './layout'
+import { BENCH_MAP } from './catalog'
 import { readings, useBenchStore } from './store'
-import type { BenchKind, BenchLimits, RiskReading, RiskStatus } from './types'
+import type { BenchLimits, RiskReading, RiskStatus } from './types'
 
 const SOCKET_COUNT = 4
-const HIGH_POWER_KINDS = new Set<BenchKind>(['kettle', 'dryer', 'cooker', 'gaming'])
 
 function watts(value: number) {
   return `${Math.round(value).toLocaleString('zh-CN')} W`
@@ -138,39 +134,13 @@ export function WorkbenchSidebar() {
   const selectedItem = state.items.find(item => item.id === state.selectedId) ?? null
   const selectedSpec = selectedItem ? BENCH_MAP[selectedItem.kind] : null
   const freeSocketIndex = sockets.findIndex(item => item === null)
-  const highPowerCatalog = BENCH_CATALOG.filter(item => HIGH_POWER_KINDS.has(item.id))
-  const smallDeviceCatalog = BENCH_CATALOG.filter(item => !HIGH_POWER_KINDS.has(item.id))
   const connectedCount = currentReadings.connectedCount
-
-  const addItem = (kind: BenchKind) => {
-    const live = useBenchStore.getState()
-    if (live.items.length >= BENCH_MAX_ITEMS) {
-      setNotice(`方案最多放置 ${BENCH_MAX_ITEMS} 件设备。`)
-      return
-    }
-    const position = findPlacement(kind, live.items)
-    if (!position) {
-      setNotice('桌面没有合适的空位，请先移动或移除设备。')
-      return
-    }
-    const existingIds = new Set(live.items.map(item => item.id))
-    live.addItem(kind, { position })
-    const updated = useBenchStore.getState()
-    const added = updated.items.find(item => !existingIds.has(item.id))
-    if (added) updated.select(added.id)
-    setNotice(`${BENCH_MAP[kind].name}已添加到桌面。`)
-  }
 
   const unplugItem = (id: string) => {
     const live = useBenchStore.getState()
     const item = live.items.find(candidate => candidate.id === id)
     if (!item) return
-    const position = findPlacement(item.kind, live.items, [0, 1], item.id)
-    if (!position) {
-      setNotice('桌面没有合适的空位，暂时无法拔下。')
-      return
-    }
-    live.moveItem(id, { position })
+    live.disconnectItem(id)
     live.select(id)
     setNotice(`${BENCH_MAP[item.kind].name}已拔下并留在桌面。`)
   }
@@ -179,7 +149,10 @@ export function WorkbenchSidebar() {
     const live = useBenchStore.getState()
     const item = live.items.find(candidate => candidate.id === id)
     if (!item || live.items.some(candidate => candidate.socket === socketIndex)) return
-    live.moveItem(id, { socket: socketIndex })
+    if (!live.moveItem(id, { socket: socketIndex })) {
+      setNotice('接入失败，插孔可能已被占用。')
+      return
+    }
     live.select(id)
     setNotice(`${BENCH_MAP[item.kind].name}已接入插孔 ${String(socketIndex + 1).padStart(2, '0')}。`)
   }
@@ -193,57 +166,13 @@ export function WorkbenchSidebar() {
     }
   }
 
-  const renderCatalogGroup = (title: string, kinds: typeof BENCH_CATALOG) => (
-    <section key={title} className="space-y-1.5">
-      <h4 className="px-1 text-xs font-medium text-muted-foreground">{title}</h4>
-      <div className="divide-y divide-rule border-y border-rule">
-        {kinds.map(spec => (
-          <div
-            key={spec.id}
-            draggable
-            onDragStart={event => {
-              event.dataTransfer.effectAllowed = 'copy'
-              event.dataTransfer.setData('application/x-dorm-bench-kind', spec.id)
-              window.dispatchEvent(new CustomEvent('bench-native-drag-start', {
-                detail: { kind: spec.id, clientX: event.clientX, clientY: event.clientY },
-              }))
-            }}
-            onDragEnd={() => window.dispatchEvent(new CustomEvent('bench-native-drag-end'))}
-            className="group flex min-h-12 items-center gap-1.5 py-1"
-            data-catalog-kind={spec.id}
-          >
-            <GripVertical aria-hidden="true" className="ml-0.5 size-4 shrink-0 cursor-grab text-muted-foreground/60" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{spec.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {spec.category} · 资料参考 {spec.referenceText}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              disabled={state.items.length >= BENCH_MAX_ITEMS}
-              onClick={() => addItem(spec.id)}
-              aria-label={`添加${spec.name}到桌面`}
-              title="添加到桌面"
-              className="size-11 rounded-md text-muted-foreground hover:text-foreground"
-            >
-              <Plus />
-            </Button>
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-
   return (
     <aside
       aria-label="组合实验控制面板"
-      className="pointer-events-auto absolute inset-x-0 bottom-0 z-30 flex h-1/2 max-h-1/2 flex-col overflow-hidden rounded-t-xl border border-b-0 border-border bg-card text-card-foreground shadow-lg md:inset-x-auto md:inset-y-0 md:right-0 md:h-auto md:max-h-none md:w-88 md:rounded-none md:border-b md:border-r-0 md:border-t-0"
+      className="pointer-events-auto z-30 flex min-h-0 flex-1 flex-col overflow-hidden border-border bg-card text-card-foreground md:absolute md:inset-y-0 md:right-0 md:w-80 md:border-l"
       data-workbench-sidebar
     >
       <div className="shrink-0 border-b border-rule px-4 pb-3 pt-2 md:pt-4">
-        <div aria-hidden="true" className="mx-auto mb-2 h-1 w-10 rounded-full bg-border md:hidden" />
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs text-muted-foreground">桌面负载 · 情景推演</p>
@@ -270,20 +199,7 @@ export function WorkbenchSidebar() {
             <ThresholdStrip title="宿舍负载" reading={currentReadings.room} />
           </div>
 
-          <section className="sticky top-0 z-20 -mx-4 space-y-2 border-b border-rule bg-card/95 px-4 pb-3 pt-2 backdrop-blur" aria-labelledby="workbench-catalog-title" data-workbench-palette>
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h3 id="workbench-catalog-title" className="text-sm font-semibold">电器物品栏</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">拖到桌面，或点 + 放置 · {state.items.length} / {BENCH_MAX_ITEMS}</p>
-              </div>
-              <GripVertical aria-hidden="true" className="size-4 text-muted-foreground" />
-            </div>
-            <div className="max-h-56 space-y-2 overflow-y-auto overscroll-contain pr-1">
-              {renderCatalogGroup('高功率设备', highPowerCatalog)}
-              {renderCatalogGroup('小型设备', smallDeviceCatalog)}
-            </div>
-            {notice && <p className="text-xs text-muted-foreground" role="status" aria-live="polite">{notice}</p>}
-          </section>
+          {notice && <p className="text-xs text-muted-foreground" role="status" aria-live="polite">{notice}</p>}
 
           <section className="space-y-2" aria-labelledby="workbench-presets-title">
             <div className="flex items-center justify-between">
@@ -318,7 +234,7 @@ export function WorkbenchSidebar() {
                 {currentReadings.runningCount} 台运行
               </Badge>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-2">
               {sockets.map((item, index) => {
                 const spec = item ? BENCH_MAP[item.kind] : null
                 const itemWatts = item ? currentReadings.itemWatts[item.id] ?? 0 : 0
@@ -598,7 +514,7 @@ export function WorkbenchSidebar() {
 
 export function WorkbenchToolbar({ onExit }: { onExit: () => void }) {
   return (
-    <header className="pointer-events-none absolute inset-x-0 top-0 z-40 flex h-14 items-center justify-between gap-3 px-4 md:px-6" data-workbench-toolbar>
+    <header className="pointer-events-none absolute inset-x-0 top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-rule bg-background px-4 md:px-6" data-workbench-toolbar>
       <div className="pointer-events-auto flex items-center gap-3">
         <Button
           variant="ghost"
@@ -610,7 +526,7 @@ export function WorkbenchToolbar({ onExit }: { onExit: () => void }) {
           <span className="text-sm font-semibold tracking-tight">组合实验</span>
         </Button>
         <span aria-hidden="true" className="h-5 w-px bg-border" />
-        <span className="hidden text-xs text-muted-foreground sm:inline">设备负载推演</span>
+        <span className="hidden text-xs text-muted-foreground sm:inline">左侧拖入电器 · 拖电器移动 · 拖插头接电</span>
       </div>
       <Button
         variant="outline"

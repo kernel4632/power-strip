@@ -7,6 +7,7 @@ import {
 } from './catalog'
 import {
   findPlacement,
+  fitsPlacement,
   fitsTable,
   fitsSocketPlacement,
   SOCKET_POSITIONS,
@@ -35,6 +36,7 @@ export interface BenchState {
   selectedId: string | null
   addItem: (kind: BenchKind, destination?: BenchPoint | BenchDestination) => string | null
   moveItem: (id: string, destination: BenchDestination) => boolean
+  disconnectItem: (id: string, position?: BenchPoint) => boolean
   removeItem: (id: string) => void
   setItemOn: (id: string, on: boolean) => void
   setItemLoad: (id: string, load: number) => void
@@ -245,9 +247,8 @@ export const useBenchStore = create<BenchState>()((set) => ({
         position = placement
       } else {
         if (!isPoint(destination.position)) return state
-        const placement = findPlacement(kind, state.items, destination.position)
-        if (!placement) return state
-        position = placement
+        if (!fitsPlacement(kind, destination.position, state.items)) return state
+        position = [...destination.position]
       }
       addedId = `bench-item-${++itemSequence}`
       const item: BenchItem = { id: addedId, kind, position, socket, on: false, load: 100, customWatts: null }
@@ -284,16 +285,29 @@ export const useBenchStore = create<BenchState>()((set) => ({
       }
 
       if (!isPoint(destination.position)) return state
-      const position = findPlacement(item.kind, state.items, destination.position, id)
-      if (!position) return state
+      if (!fitsPlacement(item.kind, destination.position, state.items, id)) return state
+      const position: BenchPoint = [...destination.position]
       moved = true
       return {
         items: state.items.map(candidate => candidate.id === id
-          ? { ...candidate, socket: null, position }
+          ? { ...candidate, position }
           : candidate),
       }
     })
     return moved
+  },
+
+  disconnectItem: (id, position) => {
+    let disconnected = false
+    set(state => {
+      if (position && !isPoint(position)) return state
+      if (!state.items.some(item => item.id === id)) return state
+      disconnected = true
+      return { items: state.items.map(item => item.id === id
+        ? { ...item, socket: null, plugPosition: position ? [...position] : undefined }
+        : item) }
+    })
+    return disconnected
   },
 
   removeItem: id => set(state => {
