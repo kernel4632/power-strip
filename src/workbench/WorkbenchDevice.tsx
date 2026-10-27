@@ -150,7 +150,7 @@ function PowerLead({ item, plugPreview, onPointerDown }: { item: BenchItem; plug
 
   return <group>
     <Cable points={points} color="#303633" radius={.017} />
-    <group onPointerDown={onPointerDown}>
+    <group name={`bench-plug-${item.id}`} onPointerDown={onPointerDown}>
       <AppliancePlug position={plugPosition} connected={connected} />
       {onPointerDown && <mesh position={plugPosition}>
         <boxGeometry args={[.24, .16, .2]} />
@@ -200,7 +200,7 @@ export function WorkbenchDevice({
   >
     {selected && <mesh position={[0, .008, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[Math.max(spec.footprint[0], spec.footprint[1]) * .52, Math.max(spec.footprint[0], spec.footprint[1]) * .58, 40]} /><meshBasicMaterial color="#d5ad71" transparent opacity={.88} depthWrite={false} /></mesh>}
     <PowerLead item={item} plugPreview={plugPreview} onPointerDown={preview ? undefined : onPlugPointerDown} />
-    <group position={[0, -groundOffset, 0]}
+    <group name={`bench-body-${item.id}`} position={[0, -groundOffset, 0]}
       onClick={preview ? undefined : (event) => { event.stopPropagation(); if (event.delta < 4) onClick() }}
       onPointerDown={preview ? undefined : (event) => { event.stopPropagation(); onPointerDown(event) }}
     >{model}</group>

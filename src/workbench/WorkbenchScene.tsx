@@ -11,7 +11,9 @@ import { BENCH_Y, plugPoint, SOCKET_POSITIONS } from './layout'
 import { resolveDragTarget } from './drag-target'
 import type { BenchItem, BenchPoint } from './types'
 import { WorkbenchDevice } from './WorkbenchDevice'
-import { WorkbenchDeviceActions } from './WorkbenchDeviceActions'
+import { DeviceActionProjection } from './DeviceActionProjection'
+import type { ActionProjectionProps } from './DeviceActionProjection'
+import { projectActionObstacles } from './action-layout'
 import { Cable, PlacementMarker, PowerFlow, PowerStrip, WallBackdrop, WallOutlet, WorkbenchFurniture } from './WorkbenchGeometry'
 
 const TABLE_PLANE = new Plane(new Vector3(0, 1, 0), -BENCH_Y)
@@ -174,9 +176,15 @@ function CameraFraming() {
   const get = useThree(state => state.get)
   const width = useThree(state => state.size.width)
   const height = useThree(state => state.size.height)
+  const framedViewport = useRef('')
   useEffect(() => {
     const { camera } = get()
     if (!(camera instanceof PerspectiveCamera) || !width || !height) return
+    const viewportKey = `${window.innerWidth}:${window.innerHeight}:${width}`
+    // Reserving an action row changes only canvas height, not the user's view.
+    // Do not reset an orbited camera when a contextual panel docks/undocks.
+    if (framedViewport.current === viewportKey) return
+    framedViewport.current = viewportKey
     const distance = Math.max(7.6 / (width / height), 5) / (2 * Math.tan(camera.fov * Math.PI / 360))
     const direction = new Vector3(.8, .95, 1.2).normalize().multiplyScalar(distance)
     camera.position.copy(new Vector3(...CAMERA_TARGET).add(direction))
@@ -204,6 +212,7 @@ function Diagnostics() {
       return {
         camera: { position: camera.position.toArray(), quaternion: camera.quaternion.toArray() },
         projectedPoint: point ? screen(point) : null,
+        actionObstacles: projectActionObstacles(scene, camera, store.items, rect).map(box => ({ ...box, x: box.x + rect.left, y: box.y + rect.top })),
         items: store.items.map(item => {
           const model = scene.getObjectByName(`bench-device-${item.id}`)
           return {
@@ -225,7 +234,7 @@ function Diagnostics() {
   return null
 }
 
-function SceneContent() {
+function SceneContent(props: ActionProjectionProps) {
   const items = useBenchStore(state => state.items)
   const masterOn = useBenchStore(state => state.masterOn)
   const settings = useBenchStore(state => state.settings)
@@ -244,7 +253,7 @@ function SceneContent() {
     <PowerStrip on={masterOn} status={readings.strip.status} socketItems={socketItems} onSocketClick={index => {
       if (socketItems[index]) useBenchStore.getState().select(socketItems[index])
     }} />
-    <BenchItems /><DragPreview /><DragController /><WorkbenchDeviceActions />
+    <BenchItems /><DragPreview /><DragController /><DeviceActionProjection {...props} />
     <OrbitControls makeDefault enableDamping dampingFactor={.08} minPolarAngle={.35} maxPolarAngle={1.42} minDistance={4.5} maxDistance={60} target={CAMERA_TARGET} />
     <CameraFraming /><Diagnostics />
   </>
@@ -252,12 +261,12 @@ function SceneContent() {
 
 const CAMERA = { position: [6, 7, 10] as [number, number, number], fov: 42, near: .1, far: 100 }
 
-export function WorkbenchScene() {
+export function WorkbenchScene(props: ActionProjectionProps) {
   return <div className="h-full w-full touch-none" data-workbench-canvas>
     <Canvas camera={CAMERA} shadows={{ type: PCFShadowMap }} dpr={[1, 1.5]} gl={{ antialias: true, powerPreference: 'high-performance' }} onPointerMissed={() => {
       if (!useBenchDrag.getState().hasMoved) useBenchStore.getState().select(null)
     }}>
-      <SceneContent />
+      <SceneContent {...props} />
     </Canvas>
   </div>
 }

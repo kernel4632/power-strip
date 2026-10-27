@@ -14,6 +14,7 @@ try {
   const { fitsPlacement, SOCKET_POSITIONS, TABLE_BOUNDS, plugPoint } = await server.ssrLoadModule('/src/workbench/layout.ts')
   const { resolveDragTarget } = await server.ssrLoadModule('/src/workbench/drag-target.ts')
   const { useBenchDrag } = await server.ssrLoadModule('/src/workbench/drag.ts')
+  const { placeDeviceActions, overlapsActionRect, actionConnector } = await server.ssrLoadModule('/src/workbench/action-layout.ts')
   const store = useBenchStore
   const state = () => store.getState()
   const readings = () => selectReadings(state())
@@ -26,6 +27,32 @@ try {
   assert.equal(computeRisk(350, base).remainingWatts, -50)
   assert.equal(computeRisk(350, base).ratio, 1)
   assert.equal(computeRisk(-50, base).ratio, 0)
+
+  const panelSize = { width: 224, height: 82 }
+  for (const viewport of [{ width: 390, height: 366 }, { width: 736, height: 594 }, { width: 480, height: 1310 }]) {
+    for (const [x, y] of [[8, 8], [viewport.width - 88, 8], [8, viewport.height - 108], [viewport.width - 88, viewport.height - 108]]) {
+      const anchor = { id: 'selected-body', x, y, width: 80, height: 100 }
+      const neighbors = [anchor, { id: 'neighbor', x: viewport.width / 2 - 35, y: viewport.height / 2 - 35, width: 70, height: 70 }]
+      const position = placeDeviceActions(anchor, neighbors, viewport, panelSize)
+      assert.ok(position, 'an edge anchor can place its panel on another side')
+      assert.ok(position.x >= 8 && position.y >= 8)
+      assert.ok(position.x + position.width <= viewport.width - 8 && position.y + position.height <= viewport.height - 8)
+      assert.ok(neighbors.every(obstacle => !overlapsActionRect(position, obstacle, 16)), 'panel keeps a visible gap from every body, not just its selected anchor')
+      const line = actionConnector(anchor, position)
+      assert.ok(line.x1 >= anchor.x && line.x1 <= anchor.x + anchor.width && line.y1 >= anchor.y && line.y1 <= anchor.y + anchor.height)
+      assert.ok(line.x2 >= position.x && line.x2 <= position.x + position.width && line.y2 >= position.y && line.y2 <= position.y + position.height)
+    }
+  }
+  const filledViewport = { width: 390, height: 366 }
+  const filledModel = { id: 'zoomed-body', x: 0, y: 0, ...filledViewport }
+  assert.equal(placeDeviceActions(filledModel, [filledModel], filledViewport, panelSize), null, 'no clear space requests an external dock instead of covering the object')
+  assert.equal(placeDeviceActions(filledModel, [], { width: 200, height: 366 }, panelSize), null, 'panel is not clamped back over a model when the viewport is too narrow')
+  const movingAnchor = { id: 'moving-body', x: 30, y: 220, width: 70, height: 70 }
+  const parkedPanel = { id: 'device-actions', x: 140, y: 15, ...panelSize }
+  assert.deepEqual(placeDeviceActions(movingAnchor, [movingAnchor], filledViewport, panelSize, parkedPanel), parkedPanel, 'camera motion does not make a safe panel chase the object')
+  const obstructingBody = { id: 'new-body', x: 200, y: 20, width: 45, height: 45 }
+  const relocated = placeDeviceActions(movingAnchor, [movingAnchor, obstructingBody], filledViewport, panelSize, parkedPanel)
+  assert.ok(relocated && !overlapsActionRect(relocated, obstructingBody, 16), 'a parked panel moves again if a body enters its rectangle')
 
   const initial = readings()
   assert.equal(initial.connectedCount, 3)
@@ -183,7 +210,7 @@ try {
   assert.deepEqual(state().settings, DEFAULT_BENCH_SETTINGS)
   assert.equal(state().selectionId, null)
   assert.equal(readings().strip.watts, 1740)
-  console.log('Workbench checks passed: continuous drag targets, exact drops, overlap rejection, independent plug/body movement, cancellation, risk boundaries, totals, settings and presets.')
+  console.log('Workbench checks passed: action-panel avoidance and docking fallback, continuous drag targets, exact drops, independent plug/body movement, cancellation, risk boundaries, totals, settings and presets.')
 } finally {
   await server.close()
 }

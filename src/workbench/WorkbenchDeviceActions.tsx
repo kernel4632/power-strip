@@ -1,25 +1,11 @@
-import { Html } from '@react-three/drei'
+import type { RefObject } from 'react'
 import { Power, Trash2, Unplug, Zap } from 'lucide-react'
-import { Vector3 } from 'three'
-import type { Camera, Object3D } from 'three'
 import { Button } from '@/components/ui/button'
 import { BENCH_MAP } from './catalog'
 import { useBenchDrag } from './drag'
-import { BENCH_Y } from './layout'
 import { selectReadings, useBenchStore } from './store'
 
-const projected = new Vector3()
-
-function actionPosition(object: Object3D, camera: Camera, size: { width: number; height: number }) {
-  projected.setFromMatrixPosition(object.matrixWorld).project(camera)
-  // Keep the 224px toolbar inside the canvas, including on a phone or near an edge.
-  return [
-    Math.max(120, Math.min(size.width - 120, (projected.x + 1) * size.width / 2)),
-    Math.max(52, Math.min(size.height - 52, (1 - projected.y) * size.height / 2)),
-  ]
-}
-
-export function WorkbenchDeviceActions() {
+export function WorkbenchDeviceActions({ panelRef }: { panelRef: RefObject<HTMLDivElement | null> }) {
   const state = useBenchStore()
   const dragging = useBenchDrag(drag => drag.drag !== null)
   const item = state.items.find(candidate => candidate.id === state.selectedId)
@@ -31,10 +17,8 @@ export function WorkbenchDeviceActions() {
   const connected = item.socket !== null
   const connectionLabel = connected ? `拔下${spec.name}插头` : `将${spec.name}接入空插孔`
 
-  return <Html center position={[item.position[0], BENCH_Y + spec.height + .24, item.position[1]]}
-    calculatePosition={actionPosition} zIndexRange={[25, 20]}>
-    <div role="group" aria-label={`${spec.name}模型操作`} data-workbench-device-actions data-device-id={item.id}
-      className="w-56 rounded-xl border border-rule bg-card p-2 text-card-foreground shadow-lg"
+  return <div ref={panelRef} role="group" aria-label={`${spec.name}模型操作`} data-workbench-device-actions data-device-id={item.id}
+      className="pointer-events-auto invisible absolute left-0 top-0 w-56 max-w-full rounded-xl border border-rule bg-card p-2 text-card-foreground shadow-lg"
       onPointerDown={event => event.stopPropagation()} onClick={event => event.stopPropagation()}>
       <div className="mb-1 flex items-center justify-between gap-2 px-1 text-xs">
         <span className="truncate font-medium">{spec.name}</span>
@@ -67,5 +51,4 @@ export function WorkbenchDeviceActions() {
         </Button>
       </div>
     </div>
-  </Html>
 }
