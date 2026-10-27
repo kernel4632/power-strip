@@ -526,7 +526,7 @@ export function WorkbenchToolbar({ onExit }: { onExit: () => void }) {
           <span className="text-sm font-semibold tracking-tight">组合实验</span>
         </Button>
         <span aria-hidden="true" className="h-5 w-px bg-border" />
-        <span className="hidden text-xs text-muted-foreground sm:inline">左侧拖入电器 · 拖电器移动 · 拖插头接电</span>
+        <span className="hidden text-xs text-muted-foreground sm:inline">把手拖入 · 点模型开关/删除 · 拖插头接电</span>
       </div>
       <Button
         variant="outline"

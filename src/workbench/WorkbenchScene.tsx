@@ -11,6 +11,7 @@ import { BENCH_Y, plugPoint, SOCKET_POSITIONS } from './layout'
 import { resolveDragTarget } from './drag-target'
 import type { BenchItem, BenchPoint } from './types'
 import { WorkbenchDevice } from './WorkbenchDevice'
+import { WorkbenchDeviceActions } from './WorkbenchDeviceActions'
 import { Cable, PlacementMarker, PowerFlow, PowerStrip, WallBackdrop, WallOutlet, WorkbenchFurniture } from './WorkbenchGeometry'
 
 const TABLE_PLANE = new Plane(new Vector3(0, 1, 0), -BENCH_Y)
@@ -53,7 +54,7 @@ function DragController() {
       if (!drag || event.pointerId !== drag.pointerId) return
       if (!state.hasMoved && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 4) return
       const rect = get().gl.domElement.getBoundingClientRect()
-      const overControls = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-workbench-sidebar], [data-workbench-palette], [data-workbench-toolbar]')
+      const overControls = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-workbench-sidebar], [data-workbench-palette], [data-workbench-toolbar], [data-workbench-device-actions]')
       const inside = event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom
       const point = inside && !overControls ? rayPoint(event.clientX, event.clientY) : null
       if (!point) {
@@ -129,6 +130,7 @@ function BenchDevice({ item }: { item: BenchItem }) {
   const moved = useBenchDrag(state => state.hasMoved)
   const rayPoint = usePointerRay()
   const get = useThree(state => state.get)
+  const masterOn = useBenchStore(state => state.masterOn)
   const active = moved && position && drag?.itemId === item.id
   const displayed = active && drag.mode === 'device' ? { ...item, position } : item
   const start = (event: ThreeEvent<PointerEvent>, mode: 'device' | 'plug') => {
@@ -143,7 +145,7 @@ function BenchDevice({ item }: { item: BenchItem }) {
     useBenchDrag.getState().start(item.kind, item.id, event, mode, [origin[0] - point[0], origin[1] - point[1]])
   }
   // One model instance throughout the gesture: no original+ghost z-fighting.
-  return <WorkbenchDevice item={displayed} selected={selected}
+  return <WorkbenchDevice item={displayed} selected={selected} powered={masterOn && item.on && item.socket !== null && item.load > 0}
     plugPreview={active && drag.mode === 'plug' ? position : undefined}
     onClick={() => useBenchStore.getState().select(item.id)}
     onPointerDown={event => start(event, 'device')}
@@ -242,7 +244,7 @@ function SceneContent() {
     <PowerStrip on={masterOn} status={readings.strip.status} socketItems={socketItems} onSocketClick={index => {
       if (socketItems[index]) useBenchStore.getState().select(socketItems[index])
     }} />
-    <BenchItems /><DragPreview /><DragController />
+    <BenchItems /><DragPreview /><DragController /><WorkbenchDeviceActions />
     <OrbitControls makeDefault enableDamping dampingFactor={.08} minPolarAngle={.35} maxPolarAngle={1.42} minDistance={4.5} maxDistance={60} target={CAMERA_TARGET} />
     <CameraFraming /><Diagnostics />
   </>

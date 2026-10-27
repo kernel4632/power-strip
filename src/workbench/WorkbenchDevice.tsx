@@ -164,6 +164,7 @@ export function WorkbenchDevice({
   item,
   selected,
   preview = false,
+  powered = item.on && item.socket !== null && item.load > 0,
   plugPreview,
   onClick,
   onPointerDown,
@@ -172,6 +173,7 @@ export function WorkbenchDevice({
   item: BenchItem
   selected: boolean
   preview?: boolean
+  powered?: boolean
   plugPreview?: BenchPoint
   onClick: () => void
   onPointerDown: (event: ThreeEvent<PointerEvent>) => void
@@ -186,11 +188,11 @@ export function WorkbenchDevice({
       case 'cooker': return <Cooker color={spec.color} />
       case 'gaming': return <Laptop color={spec.color} gaming />
       case 'macbook': return <Laptop color={spec.color} />
-      case 'lamp': return <Lamp on={item.on} />
+      case 'lamp': return <Lamp on={powered} />
       case 'phone': return <Phone color={spec.color} />
       default: return <Phone tablet color={spec.color} />
     }
-  }, [item.kind, item.on, spec.color])
+  }, [item.kind, powered, spec.color])
 
   return <group
     name={preview ? 'bench-catalog-preview' : `bench-device-${item.id}`}
